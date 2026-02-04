@@ -105,8 +105,11 @@
 //     output: 'standalone',
 // };
 // export default nextConfig;
+
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    basePath: process.env.BASEPATH || '',
     trailingSlash: false,
 
     async rewrites() {
@@ -115,18 +118,61 @@ const nextConfig = {
                 source: '/api/sms-proxy/:path*',
                 destination: 'http://13.200.203.109/V2/:path*',
             },
-        ]
+        ];
     },
 
     async redirects() {
-        return [
+        const basePath = process.env.BASEPATH || '';
+
+        const redirects = [
             {
                 source: '/',
-                destination: '/front-pages/landing-page',
-                permanent: false,
-            },
-        ]
-    },
-}
+                destination: `${basePath}/front-pages/landing-page`,
+                permanent: true,
+                locale: false,
+                basePath: false
+            }
+        ];
 
-export default nextConfig
+        // Add redirects for each language
+        ['en', 'fr', 'ar'].forEach(lang => {
+            redirects.push({
+                source: `/${lang}`,
+                destination: `${basePath}/front-pages/landing-page`,
+                permanent: true,
+                locale: false,
+                basePath: false
+            });
+
+            redirects.push({
+                source: `/${lang}/:path*`,
+                destination: `${basePath}/${lang}/:path*`,
+                permanent: true,
+                locale: false,
+                basePath: false
+            });
+        });
+
+        // Add catch-all redirect for other languages
+        redirects.push({
+            source: '/:path((?!en|fr|ar|front-pages|images|api|_next|favicon\\.png).*)*',
+            destination: `${basePath}/en/:path*`,
+            permanent: true,
+            locale: false,
+            basePath: false
+        });
+
+        return redirects;
+    },
+
+    // Important for Vercel
+    output: 'standalone',
+
+    // Add this to handle internationalization properly
+    i18n: {
+        locales: ['en', 'fr', 'ar'],
+        defaultLocale: 'en',
+    }
+};
+
+export default nextConfig;
