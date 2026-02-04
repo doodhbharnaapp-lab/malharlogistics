@@ -108,6 +108,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     trailingSlash: false,
+
     async rewrites() {
         return [
             {
@@ -116,6 +117,7 @@ const nextConfig = {
             },
         ]
     },
+
     async redirects() {
         return [
             {
@@ -125,6 +127,6 @@ const nextConfig = {
             },
         ]
     },
-    output: 'standalone',
 }
+
 export default nextConfig
