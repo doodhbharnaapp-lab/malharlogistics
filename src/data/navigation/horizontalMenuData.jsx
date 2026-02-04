@@ -541,14 +541,14 @@ const horizontalMenuData = dictionary => [
       {
         label: dictionary['navigation'].raiseSupport,
         icon: 'ri-lifebuoy-line',
-        href: 'https://pixinvent.ticksy.com',
+        href: 'https://Malhar Logistics.ticksy.com',
         suffix: <i className='ri-external-link-line text-xl' />,
         target: '_blank'
       },
       {
         label: dictionary['navigation'].documentation,
         icon: 'ri-book-line',
-        href: 'https://demos.pixinvent.com/materialize-nextjs-admin-template/documentation',
+        href: 'https://demos.Malhar Logistics.com/materialize-nextjs-admin-template/documentation',
         suffix: <i className='ri-external-link-line text-xl' />,
         target: '_blank'
       },
@@ -563,7 +563,7 @@ const horizontalMenuData = dictionary => [
       {
         label: dictionary['navigation'].externalLink,
         icon: 'ri-link',
-        href: 'https://pixinvent.com',
+        href: 'https://Malhar Logistics.com',
         target: '_blank',
         suffix: <i className='ri-external-link-line text-xl' />
       },

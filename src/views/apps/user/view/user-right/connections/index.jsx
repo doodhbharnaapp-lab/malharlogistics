@@ -57,16 +57,16 @@ const socialAccountsArr = [
   {
     title: 'Twitter',
     isConnected: true,
-    username: '@Pixinvent',
+    username: '@Malhar Logistics',
     logo: '/images/logos/twitter.png',
-    href: 'https://twitter.com/pixinvents'
+    href: 'https://twitter.com/Malhar Logisticss'
   },
   {
     title: 'Linkedin',
     isConnected: true,
-    username: '@Pixinvent',
+    username: '@Malhar Logistics',
     logo: '/images/logos/linkedin.png',
-    href: 'https://www.linkedin.com/in/pixinvent-creative-studio-561a4713b'
+    href: 'https://www.linkedin.com/in/Malhar Logistics-creative-studio-561a4713b'
   },
   {
     title: 'Dribbble',

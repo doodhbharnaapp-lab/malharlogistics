@@ -125,12 +125,12 @@ const FrontMenu = props => {
       >
         Contact us
       </Typography>
-      <DropdownMenu
+      {/* <DropdownMenu
         mode={mode}
         isBelowLgScreen={isBelowLgScreen}
         isDrawerOpen={isDrawerOpen}
         setIsDrawerOpen={setIsDrawerOpen}
-      />
+      /> */}
       <Typography
         color='text.primary'
         component={Link}

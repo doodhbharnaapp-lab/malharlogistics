@@ -79,7 +79,7 @@ const HeroSection = ({ mode }) => {
           >
             <Button
               component={Link}
-              href='/contact'
+              href='#'
               size='large'
               variant='contained'
               color='primary'
@@ -88,7 +88,7 @@ const HeroSection = ({ mode }) => {
             </Button>
             <Button
               component={Link}
-              href='/contact'
+              href='#'
               size='large'
               variant='outlined'
               color='primary'

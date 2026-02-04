@@ -37,8 +37,11 @@ const Footer = () => {
                   <Logo color='var(--mui-palette-common-white)' />
                 </Link>
                 <Typography color='white' className='lg:max-is-[390px] opacity-[0.78]'>
-                  Most Powerful & Comprehensive 🤩 React NextJS Admin Template with Elegant Material Design & Unique
-                  Layouts.
+                  Reliable Transportation & Logistics Solutions
+                  <br />
+                  Malhar Logistics delivers safe, fast, and cost-effective freight services with on-time delivery and pan-India coverage.
+
+
                 </Typography>
                 <div className='flex gap-4'>
                   <TextField
@@ -154,24 +157,24 @@ const Footer = () => {
           )}
         >
           <Typography className='text-white opacity-[0.92]' variant='body2'>
-            <span>{`© ${new Date().getFullYear()}, Made with `}</span>
-            <span>{`❤️`}</span>
+            <span>{`© ${new Date().getFullYear()},`}</span>
+            {/* <span>{`❤️`}</span> */}
             <span>{` by `}</span>
-            <Link href='https://pixinvent.com/' target='_blank' className='font-medium text-white'>
-              Pixinvent
+            <Link href='https://MalharLogistics.vercel.app/' target='_blank' className='font-medium text-white'>
+              Malhar Logistics
             </Link>
           </Typography>
           <div className='flex gap-1.5 items-center opacity-[0.78]'>
-            <IconButton component={Link} size='small' href='https://github.com/pixinvent' target='_blank'>
+            <IconButton component={Link} size='small' href='https://github.com/Malhar Logistics' target='_blank'>
               <i className='ri-github-fill text-white text-lg' />
             </IconButton>
-            <IconButton component={Link} size='small' href='https://www.facebook.com/pixinvents/' target='_blank'>
+            <IconButton component={Link} size='small' href='https://www.facebook.com/Malhar Logisticss/' target='_blank'>
               <i className='ri-facebook-fill text-white text-lg' />
             </IconButton>
-            <IconButton component={Link} size='small' href='https://twitter.com/pixinvents' target='_blank'>
+            <IconButton component={Link} size='small' href='https://twitter.com/Malhar Logisticss' target='_blank'>
               <i className='ri-twitter-fill text-white text-lg' />
             </IconButton>
-            <IconButton component={Link} size='small' href='https://www.linkedin.com/company/pixinvent' target='_blank'>
+            <IconButton component={Link} size='small' href='https://www.linkedin.com/company/Malhar Logistics' target='_blank'>
               <i className='ri-linkedin-fill text-white text-lg' />
             </IconButton>
           </div>
