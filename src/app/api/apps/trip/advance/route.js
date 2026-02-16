@@ -261,7 +261,6 @@ export async function GET(request) {
 //         )
 //     }
 // }
-
 /* ================= CREATE ADVANCE (Default: UNPAID) ================= */
 export async function POST(req) {
     try {
@@ -328,23 +327,45 @@ export async function POST(req) {
             )
         }
 
-        // NEW VALIDATION: Check if an advance of same type already exists for this trip on the same date
+        // ============= FIXED: CHECK FOR DUPLICATE ADVANCE ON SAME DATE =============
+        // Ensure we have a date
+        const advanceDate = date || new Date().toISOString().split('T')[0]
+
+        // Log for debugging
+        console.log('Checking for duplicate:', {
+            tripId: tripId,
+            advanceType: advanceType,
+            date: advanceDate
+        })
+
+        // Check if an advance of the same type already exists on the same date for this trip
         const existingAdvance = await db.collection(ADVANCES_COLLECTION).findOne({
             tripId: new ObjectId(tripId),
             advanceType: advanceType.trim(),
-            date: date || new Date().toISOString().split('T')[0],
+            date: advanceDate,  // Use the same date format
             isDeleted: { $ne: true }
         })
 
         if (existingAdvance) {
+            console.log('Duplicate found:', existingAdvance)
+
             return NextResponse.json(
                 {
                     success: false,
-                    error: `An advance of type "${advanceType}" already exists for this trip on ${date || new Date().toISOString().split('T')[0]}. You cannot add multiple advances of the same type on the same day.`
+                    error: `Cannot create advance. An advance of type "${advanceType}" already exists on ${advanceDate}`,
+                    existingAdvance: {
+                        id: existingAdvance._id,
+                        amount: existingAdvance.amount,
+                        status: existingAdvance.status,
+                        date: existingAdvance.date,
+                        type: existingAdvance.advanceType
+                    }
                 },
                 { status: 400 }
             )
         }
+
+        console.log('No duplicate found, proceeding...')
 
         // Check if advance amount exceeds total advance amount (only for proposed advances)
         if (status === 'unpaid') {
@@ -381,12 +402,12 @@ export async function POST(req) {
             advanceId: advanceId,
             tripId: new ObjectId(tripId),
             vehicleNo: vehicleNo.trim(),
-            driverName: trip.driverName || '', // Store driver name for easy reference
+            driverName: trip.driverName || '',
             advanceType: advanceType.trim(),
             amount: parseFloat(amount),
             remark: remark?.trim() || '',
             paymentMode: paymentMode,
-            date: date || new Date().toISOString().split('T')[0],
+            date: advanceDate,  // Use the formatted date
             status: status,
             createdBy: createdBy,
             isDeleted: false,
@@ -735,6 +756,3 @@ export async function POST_BULK_PAID(req) {
         )
     }
 }
-
-
-

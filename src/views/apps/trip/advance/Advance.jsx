@@ -84,7 +84,8 @@ const AdvanceRegister = () => {
         totalAdvanceAmount: 0,
         advanceAmount: 0,
         advances: [],
-        tripStatus: '' // Add trip status
+        tripStatus: '', // Add trip status
+        tripDate: '' // Add this field
     })
     const [advanceForm, setAdvanceForm] = useState({
         advanceType: '',
@@ -103,6 +104,113 @@ const AdvanceRegister = () => {
     const TRIPS_API = `${API_BASE}/trip`
     const ADVANCES_API = `${API_BASE}/trip/advance`
     const ADVANCES_DATE_API = `${ADVANCES_API}/date`
+    /* ================= CHECK FOR EXISTING ACTIVE TRIPS ================= */
+    /* ================= CHECK FOR EXISTING ACTIVE TRIPS WITH DATE PRIORITY ================= */
+    const checkForOverlappingTrips = async (vehicleNo, currentTripId = null, currentTripDate = null) => {
+        try {
+            const response = await fetch(`${TRIPS_API}?vehicleNo=${vehicleNo}`)
+            const result = await response.json()
+            if (result.success) {
+                const allTrips = result.data || []
+                // IMPORTANT: Filter ONLY trips with status 'active' (case insensitive)
+                const activeTrips = allTrips.filter(trip => {
+                    const status = (trip.tripStatus || '').toLowerCase()
+                    return status === 'active'
+                })
+                console.log('All active trips for vehicle:', activeTrips) // For debugging
+                if (activeTrips.length === 0) {
+                    return { hasOverlapping: false, message: '', activeTrips: [] }
+                }
+                // Sort active trips by date (ascending)
+                const sortedActiveTrips = activeTrips.sort((a, b) =>
+                    new Date(a.tripDate || a.createdAt) - new Date(b.tripDate || b.createdAt)
+                )
+                // The earliest active trip is the one that should be manageable
+                const earliestActiveTrip = sortedActiveTrips[0]
+                const earliestActiveTripId = earliestActiveTrip._id || earliestActiveTrip.id
+                // If current trip is the earliest active trip, it's valid to manage
+                if (earliestActiveTripId === currentTripId) {
+                    return {
+                        hasOverlapping: false,
+                        message: '',
+                        activeTrips: sortedActiveTrips,
+                        isEarliest: true
+                    }
+                }
+                // If there are other active trips AND current trip is NOT the earliest
+                // Check if current trip is among active trips
+                const isCurrentActive = activeTrips.some(t => (t._id || t.id) === currentTripId)
+                if (isCurrentActive && activeTrips.length > 1) {
+                    // Current trip is active but not the earliest
+                    return {
+                        hasOverlapping: true,
+                        message: `Cannot manage this trip. Vehicle ${vehicleNo} has an earlier active trip from ${new Date(earliestActiveTrip.tripDate || earliestActiveTrip.createdAt).toLocaleDateString()}. Please complete or cancel that trip first.`,
+                        activeTrips: sortedActiveTrips,
+                        earliestTrip: earliestActiveTrip,
+                        isEarliest: false
+                    }
+                }
+            }
+            return { hasOverlapping: false, message: '', activeTrips: [] }
+        } catch (error) {
+            console.error('Error checking overlapping trips:', error)
+            return { hasOverlapping: false, message: '', activeTrips: [] }
+        }
+    }
+    /* ================= CHECK IF ADVANCE EXISTS ON DATE ================= */
+    const checkAdvanceExistsOnDate = (date, advanceType) => {
+        if (!trip.advances || trip.advances.length === 0) return false
+
+        console.log('Checking advances:', {
+            date: date,
+            advanceType: advanceType,
+            allAdvances: trip.advances
+        })
+
+        // Check if there's already an advance (paid or unpaid) on this date
+        const existingAdvance = trip.advances.find(adv => {
+            // Compare dates as strings to avoid any format issues
+            const advDate = adv.date || ''
+            const compareDate = date || ''
+
+            // Compare advance type (case insensitive)
+            const advType = (adv.advanceType || '').toLowerCase().trim()
+            const searchType = (advanceType || '').toLowerCase().trim()
+
+            const dateMatch = advDate === compareDate
+            const typeMatch = advType === searchType
+
+            if (dateMatch && typeMatch) {
+                console.log('Found matching advance:', adv)
+            }
+
+            return dateMatch && typeMatch
+        })
+
+        return !!existingAdvance
+    }
+    /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
+    const checkVehicleActiveTrips = async (vehicleNo, currentTripId = null) => {
+        try {
+            const response = await fetch(`${TRIPS_API}?vehicleNo=${vehicleNo}&status=active`)
+            const result = await response.json()
+            if (result.success) {
+                const activeTrips = result.data || []
+                // Filter out the current trip if we're editing
+                const otherActiveTrips = activeTrips.filter(trip =>
+                    trip._id !== currentTripId && trip.id !== currentTripId
+                )
+                return {
+                    hasActiveTrips: otherActiveTrips.length > 0,
+                    activeTrips: otherActiveTrips
+                }
+            }
+            return { hasActiveTrips: false, activeTrips: [] }
+        } catch (error) {
+            console.error('Error checking vehicle active trips:', error)
+            return { hasActiveTrips: false, activeTrips: [] }
+        }
+    }
     /* ================= FETCH TRIPS ================= */
     useEffect(() => {
         fetchTrips()
@@ -113,22 +221,68 @@ const AdvanceRegister = () => {
             fetchTodayAdvances()
         }
     }, [tabValue, selectedDate])
+    // ==================================== FETCH TRIPS FUNCTION ==============================================
     const fetchTrips = async () => {
         try {
             setLoading(true)
             const response = await fetch(TRIPS_API)
             const result = await response.json()
             if (result.success) {
-                // Store all trips
+                // Get all trips data
                 const allTripsData = result.data || []
-                setAllTrips(allTripsData)
-                // Filter only active trips (tripStatus === 'active')
-                const activeTrips = allTripsData.filter(trip =>
-                    trip.tripStatus === 'active' || trip.tripStatus === 'Active'
-                )
+                // IMPORTANT: Filter to ONLY show active trips
+                // Exclude cancelled, completed, closed, etc.
+                const activeTripsOnly = allTripsData.filter(trip => {
+                    const status = (trip.tripStatus || '').toLowerCase()
+                    return status === 'active' // Only show trips with status exactly 'active'
+                })
+                setAllTrips(activeTripsOnly) // Store only active trips
+                // Group active trips by vehicle
+                const tripsByVehicle = {}
+                activeTripsOnly.forEach(trip => {
+                    if (!tripsByVehicle[trip.vehicleNo]) {
+                        tripsByVehicle[trip.vehicleNo] = []
+                    }
+                    tripsByVehicle[trip.vehicleNo].push({
+                        ...trip,
+                        tripDate: trip.tripDate || trip.createdAt,
+                        statusLower: (trip.tripStatus || '').toLowerCase()
+                    })
+                })
+                // Process each vehicle's trips
+                const processedTrips = []
+                Object.keys(tripsByVehicle).forEach(vehicleNo => {
+                    const vehicleTrips = tripsByVehicle[vehicleNo]
+                    // Sort trips by date
+                    const sortedTrips = vehicleTrips.sort((a, b) =>
+                        new Date(a.tripDate) - new Date(b.tripDate)
+                    )
+                    // mark all but the earliest as "blocked"
+                    if (sortedTrips.length > 1) {
+                        // The earliest active trip is the valid one
+                        const earliestActive = sortedTrips[0]
+                        sortedTrips.forEach(trip => {
+                            if (trip._id === earliestActive._id || trip.id === earliestActive.id) {
+                                trip.canManageAdvances = true
+                                trip.displayStatus = 'ACTIVE (Current)'
+                            } else {
+                                trip.canManageAdvances = false
+                                trip.displayStatus = 'BLOCKED - Complete earlier trip first'
+                            }
+                            processedTrips.push(trip)
+                        })
+                    } else {
+                        // Single active trip for this vehicle
+                        sortedTrips.forEach(trip => {
+                            trip.canManageAdvances = true
+                            trip.displayStatus = 'ACTIVE'
+                            processedTrips.push(trip)
+                        })
+                    }
+                })
                 // Fetch advances for each active trip
                 const tripsWithAdvances = await Promise.all(
-                    activeTrips.map(async (trip) => {
+                    processedTrips.map(async (trip) => {
                         try {
                             const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
                             const advancesResult = await advancesResponse.json()
@@ -141,14 +295,17 @@ const AdvanceRegister = () => {
                                 .filter(a => a.status === 'unpaid')
                                 .reduce((s, a) => s + Number(a.amount || 0), 0)
                             const balance = (trip.totalAdvanceAmount || 0) - totalPaid
-                            const availableBalance = balance - totalProposed // Available for new advances
+                            const availableBalance = balance - totalProposed
                             return {
                                 ...trip,
                                 advances: advances,
                                 totalAdvancePaid: totalPaid,
                                 totalProposed: totalProposed,
                                 balance: balance,
-                                availableBalance: availableBalance
+                                availableBalance: availableBalance,
+                                tripDate: trip.tripDate || trip.createdAt || '',
+                                canManageAdvances: trip.canManageAdvances || false,
+                                displayStatus: trip.displayStatus || trip.tripStatus
                             }
                         } catch (error) {
                             console.error(`Error fetching advances for trip ${trip._id}:`, error)
@@ -158,12 +315,27 @@ const AdvanceRegister = () => {
                                 totalAdvancePaid: 0,
                                 totalProposed: 0,
                                 balance: trip.totalAdvanceAmount || 0,
-                                availableBalance: trip.totalAdvanceAmount || 0
+                                availableBalance: trip.totalAdvanceAmount || 0,
+                                tripDate: trip.tripDate || trip.createdAt || '',
+                                canManageAdvances: trip.canManageAdvances || false,
+                                displayStatus: trip.displayStatus || trip.tripStatus
                             }
                         }
                     })
                 )
                 setRows(tripsWithAdvances || [])
+                // Optional: Show warning if there are vehicles with multiple active trips
+                const vehiclesWithMultipleTrips = Object.keys(tripsByVehicle).filter(
+                    vehicle => tripsByVehicle[vehicle].length > 1
+                )
+                if (vehiclesWithMultipleTrips.length > 0) {
+                    console.warn('Vehicles with multiple active trips:', vehiclesWithMultipleTrips)
+                    showSnackbar(
+                        `⚠️ Warning: ${vehiclesWithMultipleTrips.length} vehicle(s) have multiple active trips. Only the earliest trip for each vehicle can manage advances.`,
+                        'warning',
+                        5000
+                    )
+                }
             } else {
                 showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
             }
@@ -205,24 +377,35 @@ const AdvanceRegister = () => {
             // Fetch trip details
             const tripResponse = await fetch(`${TRIPS_API}?id=${tripId}`)
             const tripResult = await tripResponse.json()
+
             if (!tripResult.success || !tripResult.data) {
                 showSnackbar('Trip not found', 'error')
                 return null
             }
+
             // Fetch advances for this trip
             const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${tripId}`)
             const advancesResult = await advancesResponse.json()
-            const advances = advancesResult.success ? advancesResult.data : []
+
+            // Ensure all advances have properly formatted dates
+            const advances = advancesResult.success ? (advancesResult.data || []).map(adv => ({
+                ...adv,
+                date: adv.date || adv.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+            })) : []
+
             // Calculate totals
             const totalPaid = advances
                 .filter(a => a.status === 'paid')
                 .reduce((s, a) => s + Number(a.amount || 0), 0)
+
             const totalProposed = advances
                 .filter(a => a.status === 'unpaid')
                 .reduce((s, a) => s + Number(a.amount || 0), 0)
+
             const totalAdvance = Array.isArray(tripResult.data) ? tripResult.data[0].totalAdvanceAmount : tripResult.data.totalAdvanceAmount
             const balance = totalAdvance - totalPaid
             const availableBalance = balance - totalProposed
+
             return {
                 trip: Array.isArray(tripResult.data)
                     ? tripResult.data[0]
@@ -242,29 +425,14 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= GET AVAILABLE ADVANCE TYPES ================= */
-    // const getAvailableAdvanceTypes = () => {
-    //     if (!trip.advances || trip.advances.length === 0) {
-    //         return advanceTypes
-    //     }
-    //     // Get all advance types already used in this trip
-    //     const usedTypes = trip.advances.map(adv => adv.advanceType)
-    //     // Filter out already used types
-    //     return advanceTypes.filter(type => !usedTypes.includes(type))
-    // }
-    /* ================= GET AVAILABLE ADVANCE TYPES ================= */
-    /* ================= GET AVAILABLE ADVANCE TYPES ================= */
     const getAvailableAdvanceTypes = () => {
         if (!trip.advances || trip.advances.length === 0) {
             return advanceTypes
         }
-
-        // Get all advance types already used on the selected date
-        const usedTypesOnSelectedDate = trip.advances
-            .filter(adv => adv.date === advanceForm.date)
-            .map(adv => adv.advanceType)
-
-        // Filter out types used on the selected date
-        return advanceTypes.filter(type => !usedTypesOnSelectedDate.includes(type))
+        // Get all advance types already used in this trip
+        const usedTypes = trip.advances.map(adv => adv.advanceType)
+        // Filter out already used types
+        return advanceTypes.filter(type => !usedTypes.includes(type))
     }
     /* ================= CALCULATIONS ================= */
     const totalDiesel = Number(trip.dieselLtr || 0) * Number(trip.dieselRate || 0)
@@ -311,40 +479,69 @@ const AdvanceRegister = () => {
                 showSnackbar('Trip ID is required', 'error')
                 return
             }
-            // Check if trip is active
-            if (row.tripStatus && row.tripStatus !== 'active' && row.tripStatus !== 'Active') {
-                showSnackbar(`Cannot edit trip with status: ${row.tripStatus}. Only active trips can be managed.`, 'error')
+            const tripId = row._id || row.id
+            // Fetch the complete trip details first
+            const tripResponse = await fetch(`${TRIPS_API}?id=${tripId}`)
+            const tripResult = await tripResponse.json()
+            if (!tripResult.success || !tripResult.data) {
+                showSnackbar('Trip not found', 'error')
                 return
             }
-            const tripId = row._id || row.id
+            const tripData = Array.isArray(tripResult.data) ? tripResult.data[0] : tripResult.data
+            const tripStatus = (tripData.tripStatus || '').toLowerCase()
+            const tripDate = tripData.tripDate || tripData.createdAt
+            // Check if trip is active (strict check)
+            if (tripStatus !== 'active') {
+                showSnackbar(`Cannot manage advances for trip with status: ${tripData.tripStatus}`, 'error')
+                return
+            }
+            // CRITICAL CHECK: Check for OTHER active trips with date priority
+            const overlapCheck = await checkForOverlappingTrips(
+                tripData.vehicleNo,
+                tripId,
+                tripDate
+            )
+            if (overlapCheck.hasOverlapping) {
+                // Show which earlier trip is blocking
+                const blockingTrip = overlapCheck.earliestTrip
+                const blockingDate = new Date(blockingTrip.tripDate || blockingTrip.createdAt).toLocaleDateString()
+                showSnackbar(
+                    `Cannot manage this trip. Vehicle ${tripData.vehicleNo} has an EARLIER active trip from ${blockingDate} (${blockingTrip.fromLocation || ''} → ${blockingTrip.toLocation || ''}).\n\nPlease complete or cancel that trip first.`,
+                    'error',
+                    10000
+                )
+                return
+            }
+            // If validation passes, fetch the trip with advances
             const data = await fetchTripWithAdvances(tripId)
             if (data) {
-                const { trip: tripData, advances, totalPaid, totalProposed, balance: tripBalance, availableBalance: availBalance } = data
+                const { trip: tripDetail, advances, totalPaid, totalProposed, balance: tripBalance, availableBalance: availBalance } = data
                 setTrip({
-                    id: tripData.id || null,
-                    _id: tripData._id || tripId,
-                    vehicleNo: tripData.vehicleNo || '',
-                    vehicleType: tripData.vehicleType || '',
-                    fromLocation: tripData.fromLocation || '',
-                    toLocation: tripData.toLocation || '',
-                    lhsNo: tripData.lhsNo || '',
-                    ifscCode: tripData.ifscCode || '',
-                    bankName: tripData.bankName || '',
-                    accountNo: tripData.accountNo || '',
-                    accountHolderName: tripData.accountHolderName || '',
-                    driverName: tripData.driverName || '',
-                    driverMobile: tripData.driverMobile || '',
-                    dieselLtr: tripData.dieselLtr || 0,
-                    dieselRate: tripData.dieselRate || 0,
-                    totalDieselAmount: tripData.totalDieselAmount || 0,
-                    totalAdvanceAmount: tripData.totalAdvanceAmount || 0,
+                    id: tripDetail.id || null,
+                    _id: tripDetail._id || tripId,
+                    vehicleNo: tripDetail.vehicleNo || '',
+                    vehicleType: tripDetail.vehicleType || '',
+                    fromLocation: tripDetail.fromLocation || '',
+                    toLocation: tripDetail.toLocation || '',
+                    lhsNo: tripDetail.lhsNo || '',
+                    ifscCode: tripDetail.ifscCode || '',
+                    bankName: tripDetail.bankName || '',
+                    accountNo: tripDetail.accountNo || '',
+                    accountHolderName: tripDetail.accountHolderName || '',
+                    driverName: tripDetail.driverName || '',
+                    driverMobile: tripDetail.driverMobile || '',
+                    dieselLtr: tripDetail.dieselLtr || 0,
+                    dieselRate: tripDetail.dieselRate || 0,
+                    totalDieselAmount: tripDetail.totalDieselAmount || 0,
+                    totalAdvanceAmount: tripDetail.totalAdvanceAmount || 0,
                     advances: advances,
-                    advanceAmount: tripData.advanceAmount || 0,
-                    tripStatus: tripData.tripStatus || '',
+                    advanceAmount: tripDetail.advanceAmount || 0,
+                    tripStatus: tripDetail.tripStatus || '',
                     totalPaid: totalPaid,
                     totalProposed: totalProposed,
                     balance: tripBalance,
-                    availableBalance: availBalance
+                    availableBalance: availBalance,
+                    tripDate: tripDetail.tripDate || ''
                 })
                 setOpen(true)
             }
@@ -354,82 +551,25 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= ADD ADVANCE (as UNPAID) ================= */
-    // const addAdvance = async () => {
-    //     if (!advanceForm.advanceType || !advanceForm.amount || !trip._id || !trip.vehicleNo) {
-    //         showSnackbar('Please fill all required fields', 'warning')
-    //         return
-    //     }
-    //     // Check if trip is active
-    //     if (trip.tripStatus && trip.tripStatus !== 'active' && trip.tripStatus !== 'Active') {
-    //         showSnackbar(`Cannot add advance to trip with status: ${trip.tripStatus}`, 'error')
-    //         return
-    //     }
-    //     const amount = Number(advanceForm.amount)
-    //     // Check if proposed amount exceeds available balance
-    //     if (amount > availableBalance) {
-    //         showSnackbar(`Cannot exceed available balance (${availableBalance.toFixed(2)})`, 'error')
-    //         return
-    //     }
-    //     // Check if amount is positive
-    //     if (amount <= 0) {
-    //         showSnackbar('Amount must be greater than 0', 'error')
-    //         return
-    //     }
-    //     try {
-    //         setFormLoading(true)
-    //         const response = await fetch(ADVANCES_API, {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             body: JSON.stringify({
-    //                 tripId: trip._id,
-    //                 vehicleNo: trip.vehicleNo,
-    //                 advanceType: advanceForm.advanceType,
-    //                 amount: amount,
-    //                 remark: advanceForm.remark,
-    //                 date: advanceForm.date, // Use selected date
-    //                 status: 'unpaid'  // Default status is unpaid
-    //             })
-    //         })
-    //         const result = await response.json()
-    //         if (result.success) {
-    //             // Refresh advances for this trip
-    //             const data = await fetchTripWithAdvances(trip._id)
-    //             if (data) {
-    //                 setTrip(prev => ({
-    //                     ...prev,
-    //                     advances: data.advances,
-    //                     totalPaid: data.totalPaid,
-    //                     totalProposed: data.totalProposed,
-    //                     balance: data.balance,
-    //                     availableBalance: data.availableBalance
-    //                 }))
-    //             }
-    //             // Reset advance form with cleared advance type (to force refresh of available types)
-    //             setAdvanceForm({
-    //                 advanceType: '',
-    //                 amount: '',
-    //                 remark: '',
-    //                 date: new Date().toISOString().split('T')[0]
-    //             })
-    //             showSnackbar('Advance proposed successfully', 'success')
-    //             // Refresh the main table data
-    //             await fetchTrips()
-    //         } else {
-    //             showSnackbar(result.error || 'Failed to add advance', 'error')
-    //         }
-    //     } catch (error) {
-    //         console.error('Error adding advance:', error)
-    //         showSnackbar('Error adding advance', 'error')
-    //     } finally {
-    //         setFormLoading(false)
-    //     }
-    // }
-    /* ================= ADD ADVANCE (as UNPAID) ================= */
-    /* ================= ADD ADVANCE (as UNPAID) ================= */
-    /* ================= ADD ADVANCE (as UNPAID) ================= */
     const addAdvance = async () => {
         if (!advanceForm.advanceType || !advanceForm.amount || !trip._id || !trip.vehicleNo) {
             showSnackbar('Please fill all required fields', 'warning')
+            return
+        }
+
+        // NEW: Check if advance already exists on this date
+        console.log('Checking for duplicate:', {
+            date: advanceForm.date,
+            type: advanceForm.advanceType,
+            existingAdvances: trip.advances
+        })
+
+        if (checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)) {
+            showSnackbar(
+                `Cannot propose another "${advanceForm.advanceType}" on ${new Date(advanceForm.date).toLocaleDateString()}. ` +
+                `Please select a different date.`,
+                'error'
+            )
             return
         }
 
@@ -455,6 +595,16 @@ const AdvanceRegister = () => {
 
         try {
             setFormLoading(true)
+
+            console.log('Sending advance data:', {
+                tripId: trip._id,
+                vehicleNo: trip.vehicleNo,
+                advanceType: advanceForm.advanceType,
+                amount: amount,
+                remark: advanceForm.remark,
+                date: advanceForm.date
+            })
+
             const response = await fetch(ADVANCES_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -464,12 +614,13 @@ const AdvanceRegister = () => {
                     advanceType: advanceForm.advanceType,
                     amount: amount,
                     remark: advanceForm.remark,
-                    date: advanceForm.date,
-                    status: 'unpaid'
+                    date: advanceForm.date, // Use selected date
+                    status: 'unpaid'  // Default status is unpaid
                 })
             })
 
             const result = await response.json()
+            console.log('API response:', result)
 
             if (result.success) {
                 // Refresh advances for this trip
@@ -485,23 +636,24 @@ const AdvanceRegister = () => {
                     }))
                 }
 
-                // Reset advance form
+                // Reset advance form with cleared advance type
                 setAdvanceForm({
                     advanceType: '',
                     amount: '',
                     remark: '',
                     date: new Date().toISOString().split('T')[0]
                 })
-                showSnackbar('Advance proposed successfully', 'success')
 
+                showSnackbar('Advance proposed successfully', 'success')
                 // Refresh the main table data
                 await fetchTrips()
             } else {
+                console.error('API error:', result.error)
                 showSnackbar(result.error || 'Failed to add advance', 'error')
             }
         } catch (error) {
             console.error('Error adding advance:', error)
-            showSnackbar('Error adding advance', 'error')
+            showSnackbar('Error adding advance: ' + error.message, 'error')
         } finally {
             setFormLoading(false)
         }
@@ -589,38 +741,31 @@ const AdvanceRegister = () => {
                 unit: 'mm',
                 format: 'a3' // Use A3 for better visibility
             })
-
             const currentDate = new Date().toLocaleDateString('en-IN')
             const currentTime = new Date().toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit'
             })
-
             // Add header
             doc.setFillColor(25, 118, 210)
             doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F')
-
             // Title
             doc.setTextColor(255, 255, 255)
             doc.setFontSize(20)
             doc.setFont('helvetica', 'bold')
             doc.text('ADVANCE REGISTER REPORT', doc.internal.pageSize.width / 2, 20, { align: 'center' })
-
             // Subtitle
             doc.setFontSize(11)
             doc.setFont('helvetica', 'normal')
             doc.text(`Generated on: ${currentDate} at ${currentTime}`, doc.internal.pageSize.width / 2, 32, { align: 'center' })
-
             // Prepare table data
             const tableData = rows.map((trip, index) => {
                 // Calculate amounts
                 const paidAdvances = trip.advances?.filter(a => a.status === 'paid') || []
                 const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
-
                 const totalAdvancePaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
                 const totalUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
                 const balance = (trip.totalAdvanceAmount || 0) - totalAdvancePaid
-
                 // Get trip date
                 let tripDate = trip.createdAt ? new Date(trip.createdAt).toLocaleDateString('en-IN') : 'N/A'
                 if (!tripDate || tripDate === 'Invalid Date') {
@@ -630,24 +775,20 @@ const AdvanceRegister = () => {
                         tripDate = dates[0]
                     }
                 }
-
                 // Get latest unpaid advance amount
                 const latestUnpaidAdvance = unpaidAdvances.length > 0
                     ? Number(unpaidAdvances[unpaidAdvances.length - 1]?.amount || 0).toFixed(2)
                     : '0.00'
-
                 // Format account number for privacy
                 const formattedAccountNo = trip.accountNo
                     ? trip.accountNo.length > 8
                         ? `XXXX${trip.accountNo.slice(-4)}`
                         : trip.accountNo
                     : 'N/A'
-
                 // Get latest remark
                 const latestRemark = unpaidAdvances.length > 0
                     ? (unpaidAdvances[unpaidAdvances.length - 1]?.remark || 'N/A')
                     : 'N/A'
-
                 // Format amounts with thousand separators
                 const formatAmount = (amount) => {
                     return parseFloat(amount).toLocaleString('en-IN', {
@@ -655,7 +796,6 @@ const AdvanceRegister = () => {
                         maximumFractionDigits: 2
                     })
                 }
-
                 return [
                     (index + 1).toString(), // Sr. No.
                     tripDate, // Trip Date
@@ -674,7 +814,6 @@ const AdvanceRegister = () => {
                     latestRemark.substring(0, 50) // Remark (truncate if too long)
                 ]
             })
-
             // Define column widths - optimized for A3 landscape
             const columnWidths = [
                 15,  // 0: Sr. No.
@@ -693,7 +832,6 @@ const AdvanceRegister = () => {
                 30,  // 8: Advance (Unpaid)
                 30   // 14: Remark
             ]
-
             // AutoTable configuration
             autoTable(doc, {
                 startY: 45,
@@ -822,7 +960,6 @@ const AdvanceRegister = () => {
                 didParseCell: function (data) {
                     // Skip header rows
                     if (data.row.index < 0) return;
-
                     // Convert cell text to string for processing
                     let cellText = '';
                     if (Array.isArray(data.cell.text)) {
@@ -832,13 +969,11 @@ const AdvanceRegister = () => {
                     } else if (data.cell.text != null) {
                         cellText = String(data.cell.text);
                     }
-
                     // Color code balance column
                     if (data.column.index === 9) {
                         // Remove commas and convert to number
                         const balanceText = cellText.replace(/,/g, '');
                         const balance = parseFloat(balanceText);
-
                         if (!isNaN(balance)) {
                             if (balance < 0) {
                                 data.cell.styles.fillColor = [255, 230, 230]; // Light red
@@ -849,13 +984,11 @@ const AdvanceRegister = () => {
                             }
                         }
                     }
-
                     // Highlight if unpaid advance exists
                     if (data.column.index === 8) {
                         // Remove commas and convert to number
                         const unpaidText = cellText.replace(/,/g, '');
                         const unpaid = parseFloat(unpaidText);
-
                         if (!isNaN(unpaid) && unpaid > 0) {
                             data.cell.styles.textColor = [220, 53, 69]; // Red for pending
                         }
@@ -865,12 +998,10 @@ const AdvanceRegister = () => {
                     // Footer
                     const pageCount = doc.internal.getNumberOfPages();
                     const pageHeight = doc.internal.pageSize.height;
-
                     // Footer separator
                     doc.setDrawColor(180, 180, 180);
                     doc.setLineWidth(0.3);
                     doc.line(10, pageHeight - 20, doc.internal.pageSize.width - 10, pageHeight - 20);
-
                     // Page number
                     doc.setFontSize(9);
                     doc.setTextColor(100);
@@ -881,7 +1012,6 @@ const AdvanceRegister = () => {
                         pageHeight - 10,
                         { align: 'center' }
                     );
-
                     // Company footer
                     doc.setFontSize(8);
                     doc.text(
@@ -892,7 +1022,6 @@ const AdvanceRegister = () => {
                     );
                 }
             })
-
             // Calculate totals
             const totalAdvanceSum = rows.reduce((sum, trip) => sum + (trip.totalAdvanceAmount || 0), 0)
             const totalPaidSum = rows.reduce((sum, trip) => {
@@ -908,27 +1037,21 @@ const AdvanceRegister = () => {
                 const totalPaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
                 return sum + ((trip.totalAdvanceAmount || 0) - totalPaid)
             }, 0)
-
             // Add summary section
             const finalY = doc.lastAutoTable.finalY || 50
-
             doc.setFillColor(248, 249, 250)
             doc.rect(5, finalY + 5, doc.internal.pageSize.width - 10, 35, 'F')
-
             // Draw border around summary
             doc.setDrawColor(200, 200, 200)
             doc.setLineWidth(0.3)
             doc.rect(5, finalY + 5, doc.internal.pageSize.width - 10, 35)
-
             doc.setFontSize(12)
             doc.setTextColor(33, 37, 41)
             doc.setFont('helvetica', 'bold')
             doc.text('SUMMARY', 10, finalY + 15)
-
             doc.setDrawColor(200, 200, 200)
             doc.setLineWidth(0.2)
             doc.line(10, finalY + 18, 60, finalY + 18)
-
             // Format numbers for summary
             const formatCurrency = (amount) => {
                 return amount.toLocaleString('en-IN', {
@@ -936,30 +1059,25 @@ const AdvanceRegister = () => {
                     maximumFractionDigits: 2
                 })
             }
-
             // Financial summary in two columns
             doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
-
             // Left column
             doc.text([
                 `Total Trips: ${rows.length}`,
                 `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
                 `Total Paid: ${formatCurrency(totalPaidSum)}`
             ], 10, finalY + 25)
-
             // Right column
             doc.text([
                 `Total Unpaid: ${formatCurrency(totalUnpaidSum)}`,
                 `Total Balance: ${formatCurrency(totalBalanceSum)}`,
                 `Report Date: ${currentDate}`
             ], doc.internal.pageSize.width / 2, finalY + 25)
-
             // Add trip status summary
             const activeTrips = rows.filter(t => t.tripStatus === 'active' || t.tripStatus === 'Active').length
             const completedTrips = rows.filter(t => t.tripStatus === 'completed' || t.tripStatus === 'Completed').length
             const otherStatusTrips = rows.length - activeTrips - completedTrips
-
             doc.setFont('helvetica', 'italic')
             doc.setTextColor(108, 117, 125)
             doc.setFontSize(8)
@@ -968,13 +1086,10 @@ const AdvanceRegister = () => {
                 10,
                 finalY + 35
             )
-
             // Save the PDF
             const fileName = `Advance_Register_${new Date().toISOString().split('T')[0]}.pdf`
             doc.save(fileName)
-
             showSnackbar('PDF exported successfully!', 'success')
-
         } catch (error) {
             console.error('Error exporting to PDF:', error)
             showSnackbar('Failed to export PDF: ' + error.message, 'error')
@@ -1150,6 +1265,15 @@ const AdvanceRegister = () => {
         () => [
             columnHelper.accessor('vehicleNo', { header: 'Vehicle No' }),
             columnHelper.accessor('vehicleType', { header: 'Vehicle Type' }),
+            columnHelper.display({
+                header: 'Trip Date',
+                cell: ({ row }) => {
+                    const tripDate = row.original.tripDate
+                        ? new Date(row.original.tripDate).toLocaleDateString('en-IN')
+                        : 'N/A'
+                    return tripDate
+                }
+            }),
             columnHelper.accessor('fromLocation', { header: 'From' }),
             columnHelper.accessor('toLocation', { header: 'To' }),
             columnHelper.accessor('lhsNo', { header: 'LHS No' }),
@@ -1193,32 +1317,58 @@ const AdvanceRegister = () => {
                 }
             }),
             columnHelper.display({
+                header: 'Status',
+                cell: ({ row }) => {
+                    const trip = row.original
+                    const displayStatus = trip.displayStatus || trip.tripStatus || 'unknown'
+                    let color = 'text.secondary'
+                    if (displayStatus.includes('ACTIVE')) color = 'success.main'
+                    if (displayStatus.includes('BLOCKED')) color = 'error.main'
+                    if (displayStatus.includes('completed')) color = 'info.main'
+                    return (
+                        <Typography
+                            color={color}
+                            fontWeight={displayStatus.includes('BLOCKED') ? 'bold' : 'normal'}
+                            variant="body2"
+                        >
+                            {displayStatus}
+                            {displayStatus.includes('BLOCKED') && (
+                                <span style={{ display: 'block', fontSize: '0.75rem', color: '#f44336' }}>
+                                    ⚠️ Close previous trip
+                                </span>
+                            )}
+                        </Typography>
+                    )
+                }
+            }),
+            columnHelper.display({
                 header: 'Action',
                 cell: ({ row }) => {
-                    const status = row.original.tripStatus || 'active'
-                    const isActive = status === 'active' || status === 'Active'
-                    const balance = row.original.balance || 0
-                    const hasBalance = balance > 0
+                    const trip = row.original
+                    const canManage = trip.canManageAdvances === true
+                    const status = trip.displayStatus || trip.tripStatus
                     return (
                         <Button
                             size="small"
                             variant="outlined"
-                            onClick={() => openEdit(row.original)}
-                            disabled={loading || !isActive || !hasBalance}
+                            onClick={() => openEdit(trip)}
+                            disabled={loading || !canManage}
+                            color={canManage ? 'primary' : 'error'}
                             title={
-                                !isActive ? `Trip is ${status}. Cannot manage advances.` :
-                                    !hasBalance ? 'Trip balance is 0. Cannot manage advances.' :
-                                        'View/Manage Advances'
+                                !canManage ?
+                                    status === 'BLOCKED - Close previous trip first' ?
+                                        'This vehicle has an older active trip. Please close that trip first.' :
+                                        `Trip status: ${status}. Cannot manage advances.` :
+                                    'View/Manage Advances'
                             }
                         >
-                            {isActive && hasBalance ? 'View/Manage' :
-                                !hasBalance ? 'No Balance' : 'View Only'}
+                            {canManage ? 'View/Manage' : status.substring(0, 20)}
                         </Button>
                     )
                 }
             })
         ],
-        [loading]
+        [loading, rows]
     )
     const table = useReactTable({
         data: rows,
@@ -1518,8 +1668,16 @@ const AdvanceRegister = () => {
                             /* SELECT TRIP FOR ADDING ADVANCE */
                             <div className="flex flex-col gap-4">
                                 <Typography variant="h6" className="mb-3">Select a Trip</Typography>
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    <strong>Important:</strong> A vehicle can only have ONE active trip at a time.
+                                    Previous trips must be closed/completed/cancelled before starting a new one.
+                                </Alert>
                                 <Autocomplete
-                                    options={rows.filter(row => row.vehicleNo && row.availableBalance > 0)}
+                                    options={rows.filter(row =>
+                                        row.vehicleNo &&
+                                        row.availableBalance > 0 &&
+                                        (row.tripStatus === 'active' || row.tripStatus === 'Active')
+                                    )}
                                     getOptionLabel={(option) => `${option.vehicleNo} - ${option.driverName || ''} (Available: ${option.availableBalance.toFixed(2)})`}
                                     value={null}
                                     onChange={(_, newValue) => {
@@ -1540,12 +1698,64 @@ const AdvanceRegister = () => {
                                             <div>
                                                 <Typography variant="body2">{option.vehicleNo}</Typography>
                                                 <Typography variant="caption" color="textSecondary">
-                                                    {option.driverName} | {option.fromLocation} → {option.toLocation} | Available: {option.availableBalance.toFixed(2)}
+                                                    {option.driverName} | {option.fromLocation} → {option.toLocation} |
+                                                    Available: {option.availableBalance.toFixed(2)}
+                                                </Typography>
+                                                <Typography variant="caption" color="success.main" display="block">
+                                                    Trip Date: {option.tripDate || 'N/A'} | Status: ACTIVE
                                                 </Typography>
                                             </div>
                                         </li>
                                     )}
                                 />
+                                {/* Show vehicles with active trips that cannot be selected */}
+                                {rows.filter(row =>
+                                    row.vehicleNo &&
+                                    row.availableBalance > 0 &&
+                                    row.tripStatus !== 'active' &&
+                                    row.tripStatus !== 'Active'
+                                ).length > 0 && (
+                                        <>
+                                            <Divider sx={{ my: 2 }} />
+                                            <Typography variant="subtitle2" color="error">
+                                                ⚠️ Vehicles with Pending/Completed Trips (Cannot add advances):
+                                            </Typography>
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow>
+                                                        <TableCell>Vehicle No</TableCell>
+                                                        <TableCell>Driver</TableCell>
+                                                        <TableCell>Status</TableCell>
+                                                        <TableCell>Trip Date</TableCell>
+                                                        <TableCell>Balance</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {rows.filter(row =>
+                                                        row.vehicleNo &&
+                                                        row.availableBalance > 0 &&
+                                                        row.tripStatus !== 'active' &&
+                                                        row.tripStatus !== 'Active'
+                                                    ).map((row, idx) => (
+                                                        <TableRow key={idx}>
+                                                            <TableCell>{row.vehicleNo}</TableCell>
+                                                            <TableCell>{row.driverName}</TableCell>
+                                                            <TableCell>
+                                                                <Typography color="error.main">
+                                                                    {row.tripStatus}
+                                                                </Typography>
+                                                            </TableCell>
+                                                            <TableCell>{row.tripDate || 'N/A'}</TableCell>
+                                                            <TableCell>{row.availableBalance?.toFixed(2)}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                            <Typography variant="caption" color="textSecondary">
+                                                These trips must be closed/completed before you can add new advances.
+                                            </Typography>
+                                        </>
+                                    )}
                             </div>
                         ) : (
                             /* EXISTING TRIP ADVANCE MANAGEMENT */
@@ -1774,7 +1984,7 @@ const AdvanceRegister = () => {
                                 </Grid>
                                 <Divider className="my-4" />
                                 {/* ADVANCE ENTRY SECTION - Only show if trip is active AND has available balance */}
-                                {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
+                                {/* {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
                                     availableBalance > 0 ? (
                                         <>
                                             <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
@@ -1854,6 +2064,172 @@ const AdvanceRegister = () => {
                                                     Add Advance
                                                 </Button>
                                             </div>
+                                        </>
+                                    ) : (
+                                        <Alert severity="warning" sx={{ mb: 3 }}>
+                                            No available balance for new advances. Available: {availableBalance.toFixed(2)}
+                                        </Alert>
+                                    )
+                                ) : (
+                                    <Alert severity="warning" sx={{ mb: 3 }}>
+                                        This trip is {trip.tripStatus}. Cannot add new advances. You can only view existing advances.
+                                    </Alert>
+                                )} */}
+                                {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
+                                    availableBalance > 0 ? (
+                                        <>
+                                            <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
+
+                                            {/* Show warning if trying to add on same date */}
+                                            {advanceForm.advanceType && advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType) && (
+                                                <Alert severity="error" sx={{ mb: 2 }}>
+                                                    ⚠️ An advance of type "{advanceForm.advanceType}" has already been proposed on {new Date(advanceForm.date).toLocaleDateString()}.
+                                                    You cannot propose another advance of the same type on the same date. Please select a different date.
+                                                </Alert>
+                                            )}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                                                <TextField
+                                                    select
+                                                    label="Advance Type"
+                                                    value={advanceForm.advanceType}
+                                                    onChange={e =>
+                                                        setAdvanceForm({ ...advanceForm, advanceType: e.target.value })
+                                                    }
+                                                    fullWidth
+                                                    disabled={formLoading}
+                                                >
+                                                    <MenuItem value="">Select Type</MenuItem>
+                                                    {getAvailableAdvanceTypes().map(t => (
+                                                        <MenuItem key={t} value={t}>{t}</MenuItem>
+                                                    ))}
+                                                    {getAvailableAdvanceTypes().length === 0 && (
+                                                        <MenuItem value="" disabled>All advance types already used</MenuItem>
+                                                    )}
+                                                </TextField>
+
+                                                <TextField
+                                                    label="Amount"
+                                                    type="number"
+                                                    value={advanceForm.amount}
+                                                    fullWidth
+                                                    disabled={formLoading}
+                                                    onChange={e => {
+                                                        const value = e.target.value
+                                                        // Validate amount doesn't exceed available balance
+                                                        const numValue = parseFloat(value) || 0
+                                                        if (numValue > availableBalance) {
+                                                            showSnackbar(`Amount cannot exceed available balance (${availableBalance.toFixed(2)})`, 'warning')
+                                                        }
+                                                        setAdvanceForm(prev => ({
+                                                            ...prev,
+                                                            amount: value
+                                                        }))
+                                                    }}
+                                                    inputProps={{ min: 0, max: availableBalance, step: 0.01 }}
+                                                    helperText={`Max: ${availableBalance.toFixed(2)}`}
+                                                    error={parseFloat(advanceForm.amount || 0) > availableBalance}
+                                                />
+
+                                                <DatePicker
+                                                    label="Date"
+                                                    value={new Date(advanceForm.date)}
+                                                    onChange={(newDate) => {
+                                                        const formattedDate = newDate.toISOString().split('T')[0]
+                                                        setAdvanceForm(prev => ({
+                                                            ...prev,
+                                                            date: formattedDate
+                                                        }))
+                                                    }}
+                                                    slotProps={{
+                                                        textField: {
+                                                            fullWidth: true,
+                                                            error: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType),
+                                                            helperText: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)
+                                                                ? 'Already proposed on this date'
+                                                                : ''
+                                                        }
+                                                    }}
+                                                    format="dd/MM/yyyy"
+                                                    shouldDisableDate={(date) => {
+                                                        // Optionally disable dates that already have all advance types used
+                                                        const dateStr = date.toISOString().split('T')[0]
+                                                        const advancesOnDate = trip.advances?.filter(adv => adv.date === dateStr) || []
+                                                        const usedTypesOnDate = advancesOnDate.map(adv => adv.advanceType)
+                                                        const availableTypes = getAvailableAdvanceTypes()
+
+                                                        // Disable date if all advance types are already used on this date
+                                                        return availableTypes.length > 0 &&
+                                                            availableTypes.every(type => usedTypesOnDate.includes(type))
+                                                    }}
+                                                />
+
+                                                <TextField
+                                                    label="Remark"
+                                                    value={advanceForm.remark}
+                                                    onChange={e =>
+                                                        setAdvanceForm({ ...advanceForm, remark: e.target.value })
+                                                    }
+                                                    fullWidth
+                                                    disabled={formLoading}
+                                                />
+
+                                                <Button
+                                                    variant="contained"
+                                                    onClick={addAdvance}
+                                                    fullWidth
+                                                    disabled={
+                                                        formLoading ||
+                                                        !advanceForm.advanceType ||
+                                                        !advanceForm.amount ||
+                                                        getAvailableAdvanceTypes().length === 0 ||
+                                                        parseFloat(advanceForm.amount || 0) > availableBalance ||
+                                                        parseFloat(advanceForm.amount || 0) <= 0 ||
+                                                        // NEW: Disable if advance already exists on this date
+                                                        (advanceForm.advanceType && advanceForm.date &&
+                                                            checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType))
+                                                    }
+                                                    startIcon={formLoading && <CircularProgress size={16} />}
+                                                >
+                                                    Add Advance
+                                                </Button>
+                                            </div>
+
+                                            {/* Show existing advances for the selected date */}
+                                            {advanceForm.date && trip.advances?.filter(adv => adv.date === advanceForm.date).length > 0 && (
+                                                <Box sx={{ mt: 2 }}>
+                                                    <Typography variant="subtitle2" color="text.secondary">
+                                                        Existing advances on {new Date(advanceForm.date).toLocaleDateString()}:
+                                                    </Typography>
+                                                    <Table size="small" sx={{ mt: 1 }}>
+                                                        <TableHead>
+                                                            <TableRow>
+                                                                <TableCell>Type</TableCell>
+                                                                <TableCell>Amount</TableCell>
+                                                                <TableCell>Status</TableCell>
+                                                            </TableRow>
+                                                        </TableHead>
+                                                        <TableBody>
+                                                            {trip.advances
+                                                                .filter(adv => adv.date === advanceForm.date)
+                                                                .map((adv, idx) => (
+                                                                    <TableRow key={idx}>
+                                                                        <TableCell>{adv.advanceType}</TableCell>
+                                                                        <TableCell>{adv.amount}</TableCell>
+                                                                        <TableCell>
+                                                                            <Typography
+                                                                                color={adv.status === 'paid' ? 'success.main' : 'warning.main'}
+                                                                                variant="body2"
+                                                                            >
+                                                                                {adv.status}
+                                                                            </Typography>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </Box>
+                                            )}
                                         </>
                                     ) : (
                                         <Alert severity="warning" sx={{ mb: 3 }}>

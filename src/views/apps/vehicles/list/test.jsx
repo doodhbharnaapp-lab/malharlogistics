@@ -1,33 +1,24 @@
-const handleSubmit = async () => {
-    if (!form.vehicleNo || !form.driverName || !form.fromLocation || !form.toLocation) {
-        showSnackbar('Please fill in all required fields', 'error')
+const addAdvance = async () => {
+    if (!advanceForm.advanceType || !advanceForm.amount || !trip._id || !trip.vehicleNo) {
+        showSnackbar('Please fill all required fields', 'warning')
         return
     }
 
-    try {
-        setFormLoading(true)
+    // NEW: Check if advance already exists on this date
+    if (checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)) {
+        showSnackbar(
+            `Cannot propose another "${advanceForm.advanceType}" on ${new Date(advanceForm.date).toLocaleDateString()}. ` +
+            `Please select a different date.`,
+            'error'
+        )
+        return
+    }
 
-        // Final validation for trip count and date
+    // Check if trip is active
+    if (trip.tripStatus && trip.tripStatus !== 'active' && trip.tripStatus !== 'Active') {
+        showSnackbar(`Cannot add advance to trip with status: ${trip.tripStatus}`, 'error')
+        return
+    }
 
-
-        if (!editingItem) {
-            // Check active trip count
-            if (tripCheck.activeCount >= 2) {
-                showSnackbar(`Vehicle ${form.vehicleNo} already has ${tripCheck.activeCount} active trips. Maximum 2 active trips allowed.`, 'error')
-                setFormLoading(false)
-                return
-            }
-
-            // Check for same date trip (including non-active)
-            const tripOnSameDate = tripCheck.trips.some(trip =>
-                trip.tripDate === form.tripDate
-            )
-
-            if (tripOnSameDate) {
-                showSnackbar(`Vehicle ${form.vehicleNo} already has a trip on ${form.tripDate}. Please select a different date.`, 'error')
-                setFormLoading(false)
-                return
-            }
-        }
-
-// ... rest of your submit logic
+    // ... rest of your existing addAdvance code
+}

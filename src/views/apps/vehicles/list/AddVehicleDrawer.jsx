@@ -831,8 +831,11 @@ const AddVehicleDrawer = ({
                                                     <FormControl size="small" fullWidth>
                                                         <InputLabel>Type</InputLabel>
                                                         <Select
+                                                            style={{ width: '150px' }}
                                                             label="Type"
                                                             value={doc.documentType}
+                                                            fullWidth
+
                                                             onChange={e =>
                                                                 updateDocument(index, 'documentType', e.target.value)
                                                             }
