@@ -242,14 +242,29 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= GET AVAILABLE ADVANCE TYPES ================= */
+    // const getAvailableAdvanceTypes = () => {
+    //     if (!trip.advances || trip.advances.length === 0) {
+    //         return advanceTypes
+    //     }
+    //     // Get all advance types already used in this trip
+    //     const usedTypes = trip.advances.map(adv => adv.advanceType)
+    //     // Filter out already used types
+    //     return advanceTypes.filter(type => !usedTypes.includes(type))
+    // }
+    /* ================= GET AVAILABLE ADVANCE TYPES ================= */
+    /* ================= GET AVAILABLE ADVANCE TYPES ================= */
     const getAvailableAdvanceTypes = () => {
         if (!trip.advances || trip.advances.length === 0) {
             return advanceTypes
         }
-        // Get all advance types already used in this trip
-        const usedTypes = trip.advances.map(adv => adv.advanceType)
-        // Filter out already used types
-        return advanceTypes.filter(type => !usedTypes.includes(type))
+
+        // Get all advance types already used on the selected date
+        const usedTypesOnSelectedDate = trip.advances
+            .filter(adv => adv.date === advanceForm.date)
+            .map(adv => adv.advanceType)
+
+        // Filter out types used on the selected date
+        return advanceTypes.filter(type => !usedTypesOnSelectedDate.includes(type))
     }
     /* ================= CALCULATIONS ================= */
     const totalDiesel = Number(trip.dieselLtr || 0) * Number(trip.dieselRate || 0)
@@ -339,27 +354,105 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= ADD ADVANCE (as UNPAID) ================= */
+    // const addAdvance = async () => {
+    //     if (!advanceForm.advanceType || !advanceForm.amount || !trip._id || !trip.vehicleNo) {
+    //         showSnackbar('Please fill all required fields', 'warning')
+    //         return
+    //     }
+    //     // Check if trip is active
+    //     if (trip.tripStatus && trip.tripStatus !== 'active' && trip.tripStatus !== 'Active') {
+    //         showSnackbar(`Cannot add advance to trip with status: ${trip.tripStatus}`, 'error')
+    //         return
+    //     }
+    //     const amount = Number(advanceForm.amount)
+    //     // Check if proposed amount exceeds available balance
+    //     if (amount > availableBalance) {
+    //         showSnackbar(`Cannot exceed available balance (${availableBalance.toFixed(2)})`, 'error')
+    //         return
+    //     }
+    //     // Check if amount is positive
+    //     if (amount <= 0) {
+    //         showSnackbar('Amount must be greater than 0', 'error')
+    //         return
+    //     }
+    //     try {
+    //         setFormLoading(true)
+    //         const response = await fetch(ADVANCES_API, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({
+    //                 tripId: trip._id,
+    //                 vehicleNo: trip.vehicleNo,
+    //                 advanceType: advanceForm.advanceType,
+    //                 amount: amount,
+    //                 remark: advanceForm.remark,
+    //                 date: advanceForm.date, // Use selected date
+    //                 status: 'unpaid'  // Default status is unpaid
+    //             })
+    //         })
+    //         const result = await response.json()
+    //         if (result.success) {
+    //             // Refresh advances for this trip
+    //             const data = await fetchTripWithAdvances(trip._id)
+    //             if (data) {
+    //                 setTrip(prev => ({
+    //                     ...prev,
+    //                     advances: data.advances,
+    //                     totalPaid: data.totalPaid,
+    //                     totalProposed: data.totalProposed,
+    //                     balance: data.balance,
+    //                     availableBalance: data.availableBalance
+    //                 }))
+    //             }
+    //             // Reset advance form with cleared advance type (to force refresh of available types)
+    //             setAdvanceForm({
+    //                 advanceType: '',
+    //                 amount: '',
+    //                 remark: '',
+    //                 date: new Date().toISOString().split('T')[0]
+    //             })
+    //             showSnackbar('Advance proposed successfully', 'success')
+    //             // Refresh the main table data
+    //             await fetchTrips()
+    //         } else {
+    //             showSnackbar(result.error || 'Failed to add advance', 'error')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error adding advance:', error)
+    //         showSnackbar('Error adding advance', 'error')
+    //     } finally {
+    //         setFormLoading(false)
+    //     }
+    // }
+    /* ================= ADD ADVANCE (as UNPAID) ================= */
+    /* ================= ADD ADVANCE (as UNPAID) ================= */
+    /* ================= ADD ADVANCE (as UNPAID) ================= */
     const addAdvance = async () => {
         if (!advanceForm.advanceType || !advanceForm.amount || !trip._id || !trip.vehicleNo) {
             showSnackbar('Please fill all required fields', 'warning')
             return
         }
+
         // Check if trip is active
         if (trip.tripStatus && trip.tripStatus !== 'active' && trip.tripStatus !== 'Active') {
             showSnackbar(`Cannot add advance to trip with status: ${trip.tripStatus}`, 'error')
             return
         }
+
         const amount = Number(advanceForm.amount)
+
         // Check if proposed amount exceeds available balance
         if (amount > availableBalance) {
             showSnackbar(`Cannot exceed available balance (${availableBalance.toFixed(2)})`, 'error')
             return
         }
+
         // Check if amount is positive
         if (amount <= 0) {
             showSnackbar('Amount must be greater than 0', 'error')
             return
         }
+
         try {
             setFormLoading(true)
             const response = await fetch(ADVANCES_API, {
@@ -371,11 +464,13 @@ const AdvanceRegister = () => {
                     advanceType: advanceForm.advanceType,
                     amount: amount,
                     remark: advanceForm.remark,
-                    date: advanceForm.date, // Use selected date
-                    status: 'unpaid'  // Default status is unpaid
+                    date: advanceForm.date,
+                    status: 'unpaid'
                 })
             })
+
             const result = await response.json()
+
             if (result.success) {
                 // Refresh advances for this trip
                 const data = await fetchTripWithAdvances(trip._id)
@@ -389,7 +484,8 @@ const AdvanceRegister = () => {
                         availableBalance: data.availableBalance
                     }))
                 }
-                // Reset advance form with cleared advance type (to force refresh of available types)
+
+                // Reset advance form
                 setAdvanceForm({
                     advanceType: '',
                     amount: '',
@@ -397,6 +493,7 @@ const AdvanceRegister = () => {
                     date: new Date().toISOString().split('T')[0]
                 })
                 showSnackbar('Advance proposed successfully', 'success')
+
                 // Refresh the main table data
                 await fetchTrips()
             } else {

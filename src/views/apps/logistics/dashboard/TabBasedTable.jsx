@@ -49,7 +49,6 @@ const TabBasedTable = () => {
   const VEHICLES_API = `${API_BASE}/vehicles`
   const MARKETVEHICLES_API = `${API_BASE}/vehicles/market`
   const MARKETTRIPS_API = `${API_BASE}/trip/market`  // ✅ CORRECTED: 'trips' not 'trip'
-
   const handleChange = (event, newValue) => {
     setValue(newValue)
   }
@@ -156,9 +155,9 @@ const TabBasedTable = () => {
             variant="scrollable"
             scrollButtons="auto"
           >
+            <Tab label="Trips" value="3" />
             <Tab label="Own Vehicles" value="1" />
             <Tab label="Market Vehicles" value="2" />
-            <Tab label="Trips" value="3" />
             <Tab label="Market Trips" value="4" />
           </TabList>
         </Box>

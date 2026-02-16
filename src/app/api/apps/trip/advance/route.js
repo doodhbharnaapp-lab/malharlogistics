@@ -125,6 +125,144 @@ export async function GET(request) {
     }
 }
 /* ================= CREATE ADVANCE (Default: UNPAID) ================= */
+// export async function POST(req) {
+//     try {
+//         const {
+//             tripId,
+//             vehicleNo,
+//             advanceType,
+//             amount,
+//             remark,
+//             paymentMode = 'cash',
+//             date,
+//             status = 'unpaid', // Default is 'unpaid' (proposed)
+//             createdBy = 'system'
+//         } = await req.json()
+//         // Validate required fields
+//         if (!tripId || !vehicleNo || !advanceType || !amount) {
+//             return NextResponse.json(
+//                 {
+//                     success: false,
+//                     error: 'Trip ID, Vehicle No, Advance Type and Amount are required'
+//                 },
+//                 { status: 400 }
+//             )
+//         }
+//         if (!ObjectId.isValid(tripId)) {
+//             return NextResponse.json(
+//                 { success: false, message: 'Invalid Trip ID' },
+//                 { status: 400 }
+//             )
+//         }
+//         if (isNaN(amount) || parseFloat(amount) <= 0) {
+//             return NextResponse.json(
+//                 { success: false, error: 'Valid amount is required' },
+//                 { status: 400 }
+//             )
+//         }
+//         const db = await getDB()
+//         // Check if trip exists
+//         const trip = await db.collection(TRIPS_COLLECTION).findOne({
+//             _id: new ObjectId(tripId),
+//             isDeleted: { $ne: true }
+//         })
+//         if (!trip) {
+//             return NextResponse.json(
+//                 { success: false, error: 'Trip not found' },
+//                 { status: 404 }
+//             )
+//         }
+//         // Check if vehicle number matches
+//         if (trip.vehicleNo !== vehicleNo) {
+//             return NextResponse.json(
+//                 {
+//                     success: false,
+//                     error: 'Vehicle number does not match trip record'
+//                 },
+//                 { status: 400 }
+//             )
+//         }
+//         // Check if advance amount exceeds total advance amount (only for proposed advances)
+//         if (status === 'unpaid') {
+//             // Get all unpaid advances for this trip
+//             const unpaidAdvances = await db.collection(ADVANCES_COLLECTION).find({
+//                 tripId: new ObjectId(tripId),
+//                 status: 'unpaid',
+//                 isDeleted: { $ne: true }
+//             }).toArray()
+//             const totalUnpaidAmount = unpaidAdvances.reduce((sum, adv) => sum + (adv.amount || 0), 0)
+//             const totalAdvanceAmount = trip.totalAdvanceAmount || 0
+//             // Check if new amount + existing unpaid exceeds total advance amount
+//             if (parseFloat(amount) + totalUnpaidAmount > totalAdvanceAmount) {
+//                 return NextResponse.json(
+//                     {
+//                         success: false,
+//                         error: `Cannot exceed total advance amount. Available: ${(totalAdvanceAmount - totalUnpaidAmount).toFixed(2)}`
+//                     },
+//                     { status: 400 }
+//                 )
+//             }
+//         }
+//         // Generate advance ID
+//         const advanceCount = await db.collection(ADVANCES_COLLECTION).countDocuments({
+//             tripId: new ObjectId(tripId)
+//         })
+//         const advanceId = `ADV${(advanceCount + 1).toString().padStart(3, '0')}`
+//         // Create advance document
+//         const advanceData = {
+//             advanceId: advanceId,
+//             tripId: new ObjectId(tripId),
+//             vehicleNo: vehicleNo.trim(),
+//             driverName: trip.driverName || '', // Store driver name for easy reference
+//             advanceType: advanceType.trim(),
+//             amount: parseFloat(amount),
+//             remark: remark?.trim() || '',
+//             paymentMode: paymentMode,
+//             date: date || new Date().toISOString().split('T')[0],
+//             status: status,
+//             createdBy: createdBy,
+//             isDeleted: false,
+//             createdAt: new Date(),
+//             updatedAt: new Date()
+//         }
+//         // Insert into advances collection
+//         const result = await db.collection(ADVANCES_COLLECTION).insertOne(advanceData)
+//         // Calculate totals for response
+//         const tripAdvances = await db.collection(ADVANCES_COLLECTION).find({
+//             tripId: new ObjectId(tripId),
+//             isDeleted: { $ne: true }
+//         }).toArray()
+//         const totalAdvancePaid = tripAdvances
+//             .filter(adv => adv.status === 'paid')
+//             .reduce((sum, adv) => sum + (adv.amount || 0), 0)
+//         const totalAdvanceUnpaid = tripAdvances
+//             .filter(adv => adv.status === 'unpaid')
+//             .reduce((sum, adv) => sum + (adv.amount || 0), 0)
+//         return NextResponse.json({
+//             success: true,
+//             message: status === 'unpaid' ? 'Advance proposed successfully' : 'Advance created and marked as paid',
+//             data: {
+//                 ...advanceData,
+//                 _id: result.insertedId
+//             },
+//             totalAdvancePaid: totalAdvancePaid,
+//             totalAdvanceUnpaid: totalAdvanceUnpaid,
+//             balance: (trip.totalAdvanceAmount || 0) - totalAdvancePaid
+//         }, { status: 201 })
+//     } catch (error) {
+//         console.error('POST advance error:', error)
+//         return NextResponse.json(
+//             {
+//                 success: false,
+//                 error: error.message,
+//                 message: 'Failed to create advance'
+//             },
+//             { status: 500 }
+//         )
+//     }
+// }
+
+/* ================= CREATE ADVANCE (Default: UNPAID) ================= */
 export async function POST(req) {
     try {
         const {
@@ -138,6 +276,7 @@ export async function POST(req) {
             status = 'unpaid', // Default is 'unpaid' (proposed)
             createdBy = 'system'
         } = await req.json()
+
         // Validate required fields
         if (!tripId || !vehicleNo || !advanceType || !amount) {
             return NextResponse.json(
@@ -148,30 +287,36 @@ export async function POST(req) {
                 { status: 400 }
             )
         }
+
         if (!ObjectId.isValid(tripId)) {
             return NextResponse.json(
                 { success: false, message: 'Invalid Trip ID' },
                 { status: 400 }
             )
         }
+
         if (isNaN(amount) || parseFloat(amount) <= 0) {
             return NextResponse.json(
                 { success: false, error: 'Valid amount is required' },
                 { status: 400 }
             )
         }
+
         const db = await getDB()
+
         // Check if trip exists
         const trip = await db.collection(TRIPS_COLLECTION).findOne({
             _id: new ObjectId(tripId),
             isDeleted: { $ne: true }
         })
+
         if (!trip) {
             return NextResponse.json(
                 { success: false, error: 'Trip not found' },
                 { status: 404 }
             )
         }
+
         // Check if vehicle number matches
         if (trip.vehicleNo !== vehicleNo) {
             return NextResponse.json(
@@ -182,6 +327,25 @@ export async function POST(req) {
                 { status: 400 }
             )
         }
+
+        // NEW VALIDATION: Check if an advance of same type already exists for this trip on the same date
+        const existingAdvance = await db.collection(ADVANCES_COLLECTION).findOne({
+            tripId: new ObjectId(tripId),
+            advanceType: advanceType.trim(),
+            date: date || new Date().toISOString().split('T')[0],
+            isDeleted: { $ne: true }
+        })
+
+        if (existingAdvance) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `An advance of type "${advanceType}" already exists for this trip on ${date || new Date().toISOString().split('T')[0]}. You cannot add multiple advances of the same type on the same day.`
+                },
+                { status: 400 }
+            )
+        }
+
         // Check if advance amount exceeds total advance amount (only for proposed advances)
         if (status === 'unpaid') {
             // Get all unpaid advances for this trip
@@ -190,8 +354,10 @@ export async function POST(req) {
                 status: 'unpaid',
                 isDeleted: { $ne: true }
             }).toArray()
+
             const totalUnpaidAmount = unpaidAdvances.reduce((sum, adv) => sum + (adv.amount || 0), 0)
             const totalAdvanceAmount = trip.totalAdvanceAmount || 0
+
             // Check if new amount + existing unpaid exceeds total advance amount
             if (parseFloat(amount) + totalUnpaidAmount > totalAdvanceAmount) {
                 return NextResponse.json(
@@ -203,11 +369,13 @@ export async function POST(req) {
                 )
             }
         }
+
         // Generate advance ID
         const advanceCount = await db.collection(ADVANCES_COLLECTION).countDocuments({
             tripId: new ObjectId(tripId)
         })
         const advanceId = `ADV${(advanceCount + 1).toString().padStart(3, '0')}`
+
         // Create advance document
         const advanceData = {
             advanceId: advanceId,
@@ -225,19 +393,24 @@ export async function POST(req) {
             createdAt: new Date(),
             updatedAt: new Date()
         }
+
         // Insert into advances collection
         const result = await db.collection(ADVANCES_COLLECTION).insertOne(advanceData)
+
         // Calculate totals for response
         const tripAdvances = await db.collection(ADVANCES_COLLECTION).find({
             tripId: new ObjectId(tripId),
             isDeleted: { $ne: true }
         }).toArray()
+
         const totalAdvancePaid = tripAdvances
             .filter(adv => adv.status === 'paid')
             .reduce((sum, adv) => sum + (adv.amount || 0), 0)
+
         const totalAdvanceUnpaid = tripAdvances
             .filter(adv => adv.status === 'unpaid')
             .reduce((sum, adv) => sum + (adv.amount || 0), 0)
+
         return NextResponse.json({
             success: true,
             message: status === 'unpaid' ? 'Advance proposed successfully' : 'Advance created and marked as paid',
@@ -562,3 +735,6 @@ export async function POST_BULK_PAID(req) {
         )
     }
 }
+
+
+
