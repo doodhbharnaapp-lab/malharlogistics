@@ -91,6 +91,7 @@ const TripInfo = () => {
     /* ---------------- API ENDPOINTS ---------------- */
     const API_BASE = '/api/apps'
     const TRIPS_API = `${API_BASE}/trip`
+    const ADVANCES_API = `${API_BASE}/trip/advance`
     const VEHICLES_API = `${API_BASE}/vehicles`
     const LOCATIONS_API = `${API_BASE}/location/info`
     /* ---------------- FILTERED DATA ---------------- */
@@ -161,7 +162,7 @@ const TripInfo = () => {
                     result.data.map(async (trip) => {
                         try {
                             const advanceResponse = await fetch(
-                                `http://localhost:3000/api/apps/trip/advance?tripId=${trip._id}`
+                                `${ADVANCES_API}?tripId=${trip._id}`
                             )
                             const advanceResult = await advanceResponse.json()
                             if (advanceResult.success) {
@@ -247,32 +248,41 @@ const TripInfo = () => {
         }
     }
     //================================= Add this function in your component=============================================================
-    // Update checkVehicleTripCount function
     const checkVehicleTripCount = async (vehicleNo, currentTripId = null) => {
+        if (!vehicleNo) {
+            return {
+                totalCount: 0,
+                activeCount: 0,
+                activeTrips: [],
+                trips: [],
+                canCreate: true,
+                message: ''
+            }
+        }
         try {
+            console.log('Checking trips for vehicle:', vehicleNo, 'Current trip ID:', currentTripId)
             const response = await fetch(`${TRIPS_API}?vehicleNo=${encodeURIComponent(vehicleNo)}`)
             const result = await response.json()
-
-            if (result.success && result.data) {
-                // Filter out the current trip if editing
-                const trips = currentTripId
-                    ? result.data.filter(trip =>
-                        trip._id !== currentTripId &&
-                        trip.id !== currentTripId &&
-                        !trip.isDeleted
-                    )
-                    : result.data.filter(trip => !trip.isDeleted)
-
-                // Count active trips only
-                const activeTrips = trips.filter(trip =>
-                    trip.tripStatus === 'active'
+            console.log('Trip check API response for', vehicleNo, ':', result)
+            if (result.success && Array.isArray(result.data)) {
+                // Filter trips for this specific vehicle only
+                const vehicleTrips = result.data.filter(trip =>
+                    trip.vehicleNo === vehicleNo && !trip.isDeleted
                 )
-
+                // Filter out current trip if editing
+                const trips = currentTripId
+                    ? vehicleTrips.filter(trip =>
+                        trip._id !== currentTripId && trip.id !== currentTripId
+                    )
+                    : vehicleTrips
+                // Count active trips
+                const activeTrips = trips.filter(trip => trip.tripStatus === 'active')
+                console.log(`Vehicle ${vehicleNo}: Found ${trips.length} total trips, ${activeTrips.length} active`)
                 return {
                     totalCount: trips.length,
                     activeCount: activeTrips.length,
                     activeTrips: activeTrips,
-                    trips: trips,  // All trips for date checking
+                    trips: trips,
                     canCreate: activeTrips.length < 2,
                     message: activeTrips.length >= 2
                         ? `Vehicle ${vehicleNo} already has ${activeTrips.length} active trips. Maximum 2 active trips allowed.`
@@ -299,49 +309,6 @@ const TripInfo = () => {
             }
         }
     }
-    /* ================= VEHICLE AUTO-COMPLETE ================= */
-    // const fetchVehicleDetails = async (vehicleNo) => {
-    //     if (!vehicleNo) {
-    //         setVehicleDetails(null)
-    //         return
-    //     }
-    //     try {
-    //         setFormLoading(true)
-    //         const response = await fetch(`${VEHICLES_API}?vehicleNo=${encodeURIComponent(vehicleNo)}`)
-    //         const result = await response.json()
-    //         if (result.success && result.data) {
-    //             const vehicle = Array.isArray(result.data) ? result.data[0] : result.data
-    //             if (vehicle) {
-    //                 const hasActiveTrip = getActiveVehicleNumbers.includes(vehicleNo)
-    //                 const isEditingCurrentVehicle = editingItem && editingItem.vehicleNo === vehicleNo
-    //                 if (hasActiveTrip && !isEditingCurrentVehicle && !editingItem) {
-    //                     showSnackbar(`Vehicle ${vehicleNo} already has an active trip.`, 'warning')
-    //                     setForm(prev => ({ ...prev, vehicleNo: '' }))
-    //                     setVehicleDetails(null)
-    //                     return
-    //                 }
-    //                 setVehicleDetails(vehicle)
-    //                 setForm(prev => ({
-    //                     ...prev,
-    //                     vehicleNo: vehicle.vehicleNo || vehicleNo,
-    //                     driverName: vehicle.driverName || vehicle.driverDetails?.name || vehicle.accountHolderName || '',
-    //                     driverMobile: vehicle.driverMobile || vehicle.driverDetails?.mobile || '',
-    //                     vehicleType: vehicle.model || vehicle.vehicleType || '',
-    //                     bankName: vehicle.bankName || '',
-    //                     ifscCode: vehicle.ifscCode || '',
-    //                     accountNo: vehicle.accountNo || '',
-    //                     accountHolderName: vehicle.accountHolderName || vehicle.driverName || ''
-    //                 }))
-    //                 showSnackbar('Vehicle details loaded', 'success')
-    //             }
-    //         }
-    //     } catch (error) {
-    //         console.error('Error fetching vehicle details:', error)
-    //         showSnackbar('Error loading vehicle details', 'error')
-    //     } finally {
-    //         setFormLoading(false)
-    //     }
-    // }
     const fetchVehicleDetails = async (vehicleNo) => {
         if (!vehicleNo) {
             setVehicleDetails(null)
@@ -349,62 +316,52 @@ const TripInfo = () => {
         }
         try {
             setFormLoading(true)
-            // First check if vehicle exists
+            console.log('Fetching details for vehicle:', vehicleNo)
+            // Fetch vehicle details
             const response = await fetch(`${VEHICLES_API}?vehicleNo=${encodeURIComponent(vehicleNo)}`)
             const result = await response.json()
+            console.log('Vehicle details response:', result)
             if (result.success && result.data) {
-                const vehicle = Array.isArray(result.data) ? result.data[0] : result.data
+                // Handle both array and single object responses
+                const vehicle = Array.isArray(result.data)
+                    ? result.data.find(v => v.vehicleNo === vehicleNo)
+                    : result.data
                 if (vehicle) {
-                    // Check trip count for this vehicle
-                    const tripCheck = await checkVehicleTripCount(
-                        vehicleNo,
-                        editingItem?._id || editingItem?.id
-                    )
-                    // If not editing and vehicle already has 2 ACTIVE trips, prevent selection
-                    if (!editingItem && !tripCheck.canCreate) {
-                        showSnackbar(tripCheck.message, 'warning')
+                    console.log('Vehicle found:', vehicle)
+                    // Make sure we're updating with the CORRECT vehicle
+                    if (vehicle.vehicleNo === vehicleNo) {
+                        setVehicleDetails(vehicle)
+                        setForm(prev => ({
+                            ...prev,
+                            vehicleNo: vehicle.vehicleNo,
+                            driverName: vehicle.driverName || vehicle.driverDetails?.name || vehicle.accountHolderName || '',
+                            driverMobile: vehicle.driverMobile || vehicle.driverDetails?.mobile || '',
+                            vehicleType: vehicle.model || vehicle.vehicleType || '',
+                            bankName: vehicle.bankName || '',
+                            ifscCode: vehicle.ifscCode || '',
+                            accountNo: vehicle.accountNo || '',
+                            accountHolderName: vehicle.accountHolderName || vehicle.driverName || ''
+                        }))
+                        showSnackbar(`Vehicle ${vehicleNo} details loaded`, 'success')
+                    } else {
+                        console.error('Vehicle number mismatch:', vehicle.vehicleNo, '!=', vehicleNo)
+                        showSnackbar('Error: Vehicle number mismatch', 'error')
                         setForm(prev => ({ ...prev, vehicleNo: '' }))
-                        setVehicleDetails(null)
-                        return
                     }
-                    // Check if trying to create trip on same date as ANY existing trip (active or not)
-                    if (!editingItem && tripCheck.totalCount > 0) {
-                        const selectedDate = form.tripDate || new Date().toISOString().split('T')[0]
-                        const tripOnSameDate = tripCheck.trips.some(trip =>
-                            trip.tripDate === selectedDate
-                        )
-                        if (tripOnSameDate) {
-                            showSnackbar(`Vehicle ${vehicleNo} already has a trip on ${selectedDate}. Please select a different date.`, 'warning')
-                            setForm(prev => ({ ...prev, vehicleNo: '' }))
-                            setVehicleDetails(null)
-                            return
-                        }
-                    }
-                    // Check if this would exceed 2 ACTIVE trips
-                    if (!editingItem && tripCheck.activeCount >= 2) {
-                        showSnackbar(`Vehicle ${vehicleNo} already has ${tripCheck.activeCount} active trips. Maximum 2 active trips allowed.`, 'warning')
-                        setForm(prev => ({ ...prev, vehicleNo: '' }))
-                        setVehicleDetails(null)
-                        return
-                    }
-                    setVehicleDetails(vehicle)
-                    setForm(prev => ({
-                        ...prev,
-                        vehicleNo: vehicle.vehicleNo || vehicleNo,
-                        driverName: vehicle.driverName || vehicle.driverDetails?.name || vehicle.accountHolderName || '',
-                        driverMobile: vehicle.driverMobile || vehicle.driverDetails?.mobile || '',
-                        vehicleType: vehicle.model || vehicle.vehicleType || '',
-                        bankName: vehicle.bankName || '',
-                        ifscCode: vehicle.ifscCode || '',
-                        accountNo: vehicle.accountNo || '',
-                        accountHolderName: vehicle.accountHolderName || vehicle.driverName || ''
-                    }))
-                    showSnackbar('Vehicle details loaded', 'success')
+                } else {
+                    console.log('No vehicle found with number:', vehicleNo)
+                    showSnackbar(`Vehicle ${vehicleNo} not found`, 'error')
+                    setForm(prev => ({ ...prev, vehicleNo: '' }))
                 }
+            } else {
+                console.log('API returned no data for vehicle:', vehicleNo)
+                showSnackbar(`Vehicle ${vehicleNo} not found in database`, 'error')
+                setForm(prev => ({ ...prev, vehicleNo: '' }))
             }
         } catch (error) {
             console.error('Error fetching vehicle details:', error)
             showSnackbar('Error loading vehicle details', 'error')
+            setForm(prev => ({ ...prev, vehicleNo: '' }))
         } finally {
             setFormLoading(false)
         }
@@ -486,52 +443,103 @@ const TripInfo = () => {
         }
     }
     /* ---------------- FORM HANDLERS ---------------- */
-    // const handleFormChange = (field, value) => {
-    //     const updatedForm = { ...form, [field]: value }
-    //     setForm(updatedForm)
-    //     if (field === 'vehicleNo' && value) {
-    //         fetchVehicleDetails(value)
-    //     }
-    //     if ((field === 'fromLocation' || field === 'toLocation') &&
-    //         updatedForm.fromLocation && updatedForm.toLocation) {
-    //         fetchRouteDetails(
-    //             updatedForm.fromLocation,
-    //             updatedForm.toLocation
-    //         )
-    //     }
-    // }
-    // Update handleFormChange to validate date
     const handleFormChange = async (field, value) => {
-        const updatedForm = { ...form, [field]: value }
-        setForm(updatedForm)
-        if (field === 'vehicleNo' && value) {
-            handleSubmit
-            fetchVehicleDetails(value)
+        // For regular fields, just update the form
+        if (field !== 'vehicleNo' && field !== 'tripDate') {
+            const updatedForm = { ...form, [field]: value }
+            setForm(updatedForm)
+            // Handle route changes
+            if ((field === 'fromLocation' || field === 'toLocation') &&
+                updatedForm.fromLocation && updatedForm.toLocation) {
+                fetchRouteDetails(
+                    updatedForm.fromLocation,
+                    updatedForm.toLocation
+                )
+            }
+            return
         }
-        if (field === 'tripDate' && form.vehicleNo) {
-            // Check if date is valid for this vehicle
-            const tripCheck = await checkVehicleTripCount(
-                form.vehicleNo,
-                editingItem?._id || editingItem?.id
-            )
-            const tripOnSameDate = tripCheck.trips.some(trip =>
-                trip.tripDate === value
-            )
-            if (tripOnSameDate) {
-                showSnackbar(`Vehicle ${form.vehicleNo} already has a trip on ${value}. Please select a different date.`, 'warning')
-                // Reset to previous date or today
-                setForm(prev => ({
-                    ...prev,
-                    tripDate: prev.tripDate || new Date().toISOString().split('T')[0]
-                }))
+        // Handle vehicle number change
+        if (field === 'vehicleNo') {
+            console.log('Vehicle number changed to:', value) // Debug log
+            // Clear form first if value is empty
+            if (!value) {
+                setForm(prev => ({ ...prev, vehicleNo: '' }))
+                setVehicleDetails(null)
+                return
+            }
+            // Update the form with new vehicle number immediately
+            setForm(prev => ({ ...prev, vehicleNo: value }))
+            setVehicleDetails(null)
+            try {
+                setFormLoading(true)
+                // Get current date
+                const currentDate = form.tripDate || new Date().toISOString().split('T')[0]
+                // Check trips for THIS vehicle (using the new value directly)
+                console.log('Checking trips for NEW vehicle:', value)
+                const tripCheck = await checkVehicleTripCount(
+                    value, // Use the new value directly, not from state
+                    editingItem?._id || editingItem?.id
+                )
+                console.log('Trip check result for', value, ':', tripCheck)
+                // For new trips, validate
+                if (!editingItem) {
+                    // Check for trip on same date
+                    const tripOnSameDate = tripCheck.trips.some(trip =>
+                        trip.tripDate === currentDate
+                    )
+                    if (tripOnSameDate) {
+                        showSnackbar(`Vehicle ${value} already has a trip on ${currentDate}. Please select a different date or vehicle.`, 'warning')
+                        setForm(prev => ({ ...prev, vehicleNo: '' }))
+                        setFormLoading(false)
+                        return
+                    }
+                    // Check active trip count
+                    if (tripCheck.activeCount >= 2) {
+                        showSnackbar(`Vehicle ${value} already has ${tripCheck.activeCount} active trips. Maximum 2 allowed.`, 'warning')
+                        setForm(prev => ({ ...prev, vehicleNo: '' }))
+                        setFormLoading(false)
+                        return
+                    }
+                }
+                // If all validations pass, fetch vehicle details for THIS vehicle
+                console.log('All validations passed for', value, '- fetching details')
+                await fetchVehicleDetails(value) // Pass the new value directly
+            } catch (error) {
+                console.error('Error validating vehicle:', error)
+                setForm(prev => ({ ...prev, vehicleNo: '' }))
+                setFormLoading(false)
             }
         }
-        if ((field === 'fromLocation' || field === 'toLocation') &&
-            updatedForm.fromLocation && updatedForm.toLocation) {
-            fetchRouteDetails(
-                updatedForm.fromLocation,
-                updatedForm.toLocation
-            )
+        // Handle date change
+        if (field === 'tripDate') {
+            // Update the date
+            setForm(prev => ({ ...prev, tripDate: value }))
+            // If we have a vehicle selected, validate the new date
+            if (form.vehicleNo && !editingItem) {
+                try {
+                    setFormLoading(true)
+                    // Check trips for the CURRENT vehicle
+                    const tripCheck = await checkVehicleTripCount(
+                        form.vehicleNo,
+                        editingItem?._id || editingItem?.id
+                    )
+                    const tripOnSameDate = tripCheck.trips.some(trip =>
+                        trip.tripDate === value
+                    )
+                    if (tripOnSameDate) {
+                        showSnackbar(`Vehicle ${form.vehicleNo} already has a trip on ${value}. Please select a different date.`, 'warning')
+                        // Revert to previous date
+                        setForm(prev => ({
+                            ...prev,
+                            tripDate: prev.tripDate || new Date().toISOString().split('T')[0]
+                        }))
+                    }
+                } catch (error) {
+                    console.error('Error validating date:', error)
+                } finally {
+                    setFormLoading(false)
+                }
+            }
         }
     }
     /* ---------------- DIALOG HANDLERS ---------------- */

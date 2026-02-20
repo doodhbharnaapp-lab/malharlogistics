@@ -123,249 +123,6 @@ export async function GET(request) {
     }
 }
 /* ================= POST - CREATE TRIP ================= */
-// export async function POST(req) {
-//     try {
-//         const {
-//             vehicleNo,
-//             driverName,
-//             vehicleType,
-//             driverMobile,
-//             fromLocation,
-//             lhsNo,
-//             toLocation,
-//             tripType,
-//             dieselLtr,
-//             ifscCode,
-//             dieselRate,
-//             accountNo,
-//             totalDieselAmount,
-//             bankName,
-//             advanceAmount,
-//             accountHolderName,
-//             totalAdvanceAmount,
-//             tripStatus,
-//             tripDate,
-//             initialRemarks
-//         } = await req.json()
-//         // Validate required fields
-//         if (!vehicleNo || !driverName || !fromLocation || !toLocation) {
-//             return NextResponse.json(
-//                 {
-//                     success: false,
-//                     error: 'Vehicle No, Driver Name, From Location and To Location are required'
-//                 },
-//                 { status: 400 }
-//             )
-//         }
-//         const db = await getDB()
-//         // Calculate total diesel amount if not provided
-//         let calculatedDieselAmount = totalDieselAmount
-//         if (!calculatedDieselAmount && dieselLtr && dieselRate) {
-//             calculatedDieselAmount = (parseFloat(dieselLtr) * parseFloat(dieselRate)).toFixed(2)
-//         }
-//         const payload = {
-//             vehicleNo: vehicleNo.trim(),
-//             driverName: driverName.trim(),
-//             vehicleType: vehicleType || '',
-//             driverMobile: driverMobile || '',
-//             fromLocation: fromLocation.trim(),
-//             lhsNo: lhsNo || '',
-//             toLocation: toLocation.trim(),
-//             tripType: tripType || 'Regular',
-//             dieselLtr: Number(dieselLtr) || 0,
-//             ifscCode: ifscCode || '',
-//             dieselRate: Number(dieselRate) || 0,
-//             accountNo: accountNo || '',
-//             totalDieselAmount: Number(calculatedDieselAmount) || 0,
-//             bankName: bankName || '',
-//             advanceAmount: Number(advanceAmount) || 0,
-//             accountHolderName: accountHolderName || driverName.trim(),
-//             totalAdvanceAmount: (Number(advanceAmount) || 0) + (Number(totalDieselAmount)),
-//             tripStatus: tripStatus || 'active',
-//             tripDate: tripDate || new Date().toISOString().split('T')[0],
-//             statusRemarks: initialRemarks || '',
-//             routeCode: '',
-//             distanceKm: 0,
-//             isDeleted: false,
-//             createdAt: new Date(),
-//             updatedAt: new Date()
-//         }
-//         // Check if trip already exists for the same vehicle and date
-//         const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
-//             vehicleNo: vehicleNo.trim(),
-//             tripDate: payload.tripDate,
-//             isDeleted: { $ne: true }
-//         })
-//         if (existingTrip) {
-//             return NextResponse.json(
-//                 {
-//                     success: false,
-//                     error: 'Trip already exists for this vehicle on the selected date',
-//                     field: 'vehicleNo'
-//                 },
-//                 { status: 409 }
-//             )
-//         }
-//         const result = await db.collection(TRIPS_COLLECTION).insertOne(payload)
-//         // Record initial status change if remarks provided
-//         if (initialRemarks && initialRemarks.trim()) {
-//             await recordStatusChange(
-//                 db,
-//                 result.insertedId,
-//                 '',
-//                 payload.tripStatus,
-//                 initialRemarks.trim(),
-//                 'system'
-//             )
-//         }
-//         return NextResponse.json(
-//             {
-//                 success: true,
-//                 message: 'Trip created successfully',
-//                 data: {
-//                     _id: result.insertedId,
-//                     ...payload
-//                 }
-//             },
-//             { status: 201 }
-//         )
-//     } catch (error) {
-//         console.error('POST trip error:', error)
-//         return NextResponse.json(
-//             {
-//                 success: false,
-//                 error: error.message,
-//                 message: 'Failed to create trip'
-//             },
-//             { status: 500 }
-//         )
-//     }
-// }
-/* ================= POST - CREATE TRIP ================= */
-// export async function POST(req) {
-//     try {
-//         const {
-//             vehicleNo,
-//             driverName,
-//             vehicleType,
-//             driverMobile,
-//             fromLocation,
-//             lhsNo,
-//             toLocation,
-//             tripType,
-//             dieselLtr,
-//             ifscCode,
-//             dieselRate,
-//             accountNo,
-//             totalDieselAmount,
-//             bankName,
-//             advanceAmount,
-//             accountHolderName,
-//             totalAdvanceAmount,
-//             tripStatus,
-//             tripDate,
-//             initialRemarks,
-//             routeCode,        // Added
-//             distanceKm,        // Added
-//             selectedRoute      // Added - might contain full route object
-//         } = await req.json()
-//         // Validate required fields
-//         if (!vehicleNo || !driverName || !fromLocation || !toLocation) {
-//             return NextResponse.json(
-//                 {
-//                     success: false,
-//                     error: 'Vehicle No, Driver Name, From Location and To Location are required'
-//                 },
-//                 { status: 400 }
-//             )
-//         }
-//         const db = await getDB()
-//         // Calculate total diesel amount if not provided
-//         let calculatedDieselAmount = totalDieselAmount
-//         if (!calculatedDieselAmount && dieselLtr && dieselRate) {
-//             calculatedDieselAmount = (parseFloat(dieselLtr) * parseFloat(dieselRate)).toFixed(2)
-//         }
-//         // Get routeCode from either direct field or selectedRoute object
-//         const finalRouteCode = routeCode || (selectedRoute?.routeCode) || '';
-//         const finalDistanceKm = distanceKm || (selectedRoute?.distanceKm) || 0;
-//         const payload = {
-//             vehicleNo: vehicleNo.trim(),
-//             driverName: driverName.trim(),
-//             vehicleType: vehicleType || '',
-//             driverMobile: driverMobile || '',
-//             fromLocation: fromLocation.trim(),
-//             lhsNo: lhsNo || '',
-//             toLocation: toLocation.trim(),
-//             tripType: tripType || 'Regular',
-//             dieselLtr: Number(dieselLtr) || 0,
-//             ifscCode: ifscCode || '',
-//             dieselRate: Number(dieselRate) || 0,
-//             accountNo: accountNo || '',
-//             totalDieselAmount: Number(calculatedDieselAmount) || 0,
-//             bankName: bankName || '',
-//             advanceAmount: Number(advanceAmount) || 0,
-//             accountHolderName: accountHolderName || driverName.trim(),
-//             totalAdvanceAmount: (Number(advanceAmount) || 0) + (Number(totalDieselAmount) || 0),
-//             tripStatus: tripStatus || 'active',
-//             tripDate: tripDate || new Date().toISOString().split('T')[0],
-//             statusRemarks: initialRemarks || '',
-//             routeCode: finalRouteCode,           // Now properly set
-//             distanceKm: finalDistanceKm,         // Now properly set
-//             isDeleted: false,
-//             createdAt: new Date(),
-//             updatedAt: new Date()
-//         }
-//         // Check if trip already exists for the same vehicle and date
-//         const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
-//             vehicleNo: vehicleNo.trim(),
-//             tripDate: payload.tripDate,
-//             isDeleted: { $ne: true }
-//         })
-//         if (existingTrip == 2) {
-//             return NextResponse.json(
-//                 {
-//                     success: false,
-//                     error: 'Trip already exists for this vehicle on the selected date',
-//                     field: 'vehicleNo'
-//                 },
-//                 { status: 409 }
-//             )
-//         }
-//         const result = await db.collection(TRIPS_COLLECTION).insertOne(payload)
-//         // Record initial status change if remarks provided
-//         if (initialRemarks && initialRemarks.trim()) {
-//             await recordStatusChange(
-//                 db,
-//                 result.insertedId,
-//                 '',
-//                 payload.tripStatus,
-//                 initialRemarks.trim(),
-//                 'system'
-//             )
-//         }
-//         return NextResponse.json(
-//             {
-//                 success: true,
-//                 message: 'Trip created successfully',
-//                 data: {
-//                     _id: result.insertedId,
-//                     ...payload
-//                 }
-//             },
-//             { status: 201 }
-//         )
-//     } catch (error) {
-//         console.error('POST trip error:', error)
-//         return NextResponse.json(
-//             {
-//                 success: false,
-//                 error: error.message,
-//                 message: 'Failed to create trip'
-//             },
-//             { status: 500 }
-//         )
-//     }
-// }
 export async function POST(req) {
     try {
         const {
@@ -393,7 +150,6 @@ export async function POST(req) {
             distanceKm,
             selectedRoute
         } = await req.json()
-
         // Validate required fields
         if (!vehicleNo || !driverName || !fromLocation || !toLocation) {
             return NextResponse.json(
@@ -404,26 +160,21 @@ export async function POST(req) {
                 { status: 400 }
             )
         }
-
         const db = await getDB()
-
         // Calculate total diesel amount if not provided
         let calculatedDieselAmount = totalDieselAmount
         if (!calculatedDieselAmount && dieselLtr && dieselRate) {
             calculatedDieselAmount = (parseFloat(dieselLtr) * parseFloat(dieselRate)).toFixed(2)
         }
-
         // Get routeCode from either direct field or selectedRoute object
         const finalRouteCode = routeCode || (selectedRoute?.routeCode) || '';
         const finalDistanceKm = distanceKm || (selectedRoute?.distanceKm) || 0;
-
         // Check 1: Check if trip already exists for the same vehicle and date (active or not)
         const existingTripOnDate = await db.collection(TRIPS_COLLECTION).findOne({
             vehicleNo: vehicleNo.trim(),
             tripDate: tripDate || new Date().toISOString().split('T')[0],
             isDeleted: { $ne: true }
         })
-
         if (existingTripOnDate) {
             return NextResponse.json(
                 {
@@ -434,14 +185,12 @@ export async function POST(req) {
                 { status: 409 }
             )
         }
-
         // Check 2: Count ONLY ACTIVE trips for this vehicle (not closed/cancelled)
         const activeTripsForVehicle = await db.collection(TRIPS_COLLECTION).countDocuments({
             vehicleNo: vehicleNo.trim(),
             tripStatus: 'active',  // Only count active trips
             isDeleted: { $ne: true }
         })
-
         if (activeTripsForVehicle >= 2) {
             return NextResponse.json(
                 {
@@ -452,7 +201,6 @@ export async function POST(req) {
                 { status: 409 }
             )
         }
-
         const payload = {
             vehicleNo: vehicleNo.trim(),
             driverName: driverName.trim(),
@@ -480,9 +228,7 @@ export async function POST(req) {
             createdAt: new Date(),
             updatedAt: new Date()
         }
-
         const result = await db.collection(TRIPS_COLLECTION).insertOne(payload)
-
         // Record initial status change if remarks provided
         if (initialRemarks && initialRemarks.trim()) {
             await recordStatusChange(
@@ -494,7 +240,6 @@ export async function POST(req) {
                 'system'
             )
         }
-
         return NextResponse.json(
             {
                 success: true,
@@ -518,177 +263,6 @@ export async function POST(req) {
         )
     }
 }
-/* ================= PUT - UPDATE TRIP ================= */
-// export async function PUT(req) {
-//     try {
-//         const {
-//             id,
-//             vehicleNo,
-//             driverName,
-//             vehicleType,
-//             driverMobile,
-//             fromLocation,
-//             lhsNo,
-//             toLocation,
-//             tripType,
-//             dieselLtr,
-//             ifscCode,
-//             dieselRate,
-//             accountNo,
-//             totalDieselAmount,
-//             bankName,
-//             advanceAmount,
-//             accountHolderName,
-//             totalAdvanceAmount,
-//             tripStatus,
-//             tripDate,
-//             statusRemarks, // Added for status change remarks
-//             statusChangedAt // Optional: timestamp when status was changed
-//         } = await req.json()
-//         if (!id) {
-//             return NextResponse.json(
-//                 { success: false, error: 'ID is required' },
-//                 { status: 400 }
-//             )
-//         }
-//         const db = await getDB()
-//         // Check if trip exists
-//         const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
-//             _id: new ObjectId(id),
-//             isDeleted: { $ne: true }
-//         })
-//         if (!existingTrip) {
-//             return NextResponse.json(
-//                 { success: false, error: 'Trip not found' },
-//                 { status: 404 }
-//             )
-//         }
-//         // Calculate total diesel amount
-//         let calculatedDieselAmount = totalDieselAmount
-//         if (!calculatedDieselAmount) {
-//             const finalDieselLtr = dieselLtr !== undefined ? dieselLtr : existingTrip.dieselLtr
-//             const finalDieselRate = dieselRate !== undefined ? dieselRate : existingTrip.dieselRate
-//             if (finalDieselLtr && finalDieselRate) {
-//                 calculatedDieselAmount = (parseFloat(finalDieselLtr) * parseFloat(finalDieselRate)).toFixed(2)
-//             }
-//         }
-//         // Determine if status is changing
-//         const isStatusChanging = tripStatus !== undefined && tripStatus !== existingTrip.tripStatus
-//         // Validate remarks if status is changing
-//         if (isStatusChanging) {
-//             if (!statusRemarks || !statusRemarks.trim()) {
-//                 return NextResponse.json(
-//                     {
-//                         success: false,
-//                         error: 'Remarks are required when changing trip status',
-//                         field: 'statusRemarks'
-//                     },
-//                     { status: 400 }
-//                 )
-//             }
-//         }
-//         // Prepare update data
-//         const updateData = {
-//             ...(vehicleNo !== undefined && { vehicleNo: vehicleNo.trim() }),
-//             ...(driverName !== undefined && { driverName: driverName.trim() }),
-//             ...(vehicleType !== undefined && { vehicleType: vehicleType.trim() }),
-//             ...(driverMobile !== undefined && { driverMobile: driverMobile.trim() }),
-//             ...(fromLocation !== undefined && { fromLocation: fromLocation.trim() }),
-//             ...(lhsNo !== undefined && { lhsNo: lhsNo.trim() }),
-//             ...(toLocation !== undefined && { toLocation: toLocation.trim() }),
-//             ...(tripType !== undefined && { tripType: tripType.trim() }),
-//             ...(dieselLtr !== undefined && { dieselLtr: Number(dieselLtr) }),
-//             ...(ifscCode !== undefined && { ifscCode: ifscCode.trim() }),
-//             ...(dieselRate !== undefined && { dieselRate: Number(dieselRate) }),
-//             ...(accountNo !== undefined && { accountNo: accountNo.trim() }),
-//             ...(totalDieselAmount !== undefined && { totalDieselAmount: Number(totalDieselAmount) }),
-//             ...(bankName !== undefined && { bankName: bankName.trim() }),
-//             ...(advanceAmount !== undefined && { advanceAmount: Number(advanceAmount) }),
-//             ...(accountHolderName !== undefined && { accountHolderName: accountHolderName.trim() }),
-//             ...(totalAdvanceAmount !== undefined && { totalAdvanceAmount: Number(totalAdvanceAmount) }),
-//             ...(tripStatus !== undefined && { tripStatus: tripStatus.trim() }),
-//             ...(tripDate !== undefined && { tripDate: tripDate }),
-//             ...(statusRemarks !== undefined && { statusRemarks: statusRemarks.trim() }),
-//             ...(calculatedDieselAmount !== undefined && { totalDieselAmount: Number(calculatedDieselAmount) }),
-//             updatedAt: new Date()
-//         }
-//         // Check for duplicate trip (if vehicleNo or tripDate changed)
-//         if (vehicleNo || tripDate) {
-//             const checkVehicleNo = vehicleNo || existingTrip.vehicleNo
-//             const checkTripDate = tripDate || existingTrip.tripDate
-//             const duplicateTrip = await db.collection(TRIPS_COLLECTION).findOne({
-//                 vehicleNo: checkVehicleNo,
-//                 tripDate: checkTripDate,
-//                 _id: { $ne: new ObjectId(id) },
-//                 isDeleted: { $ne: true }
-//             })
-//             if (duplicateTrip) {
-//                 return NextResponse.json(
-//                     {
-//                         success: false,
-//                         error: 'Another trip already exists for this vehicle on the selected date',
-//                         field: 'vehicleNo'
-//                     },
-//                     { status: 409 }
-//                 )
-//             }
-//         }
-//         // Record status change if status is being updated
-//         if (isStatusChanging) {
-//             const statusChangeResult = await recordStatusChange(
-//                 db,
-//                 id,
-//                 existingTrip.tripStatus,
-//                 tripStatus,
-//                 statusRemarks.trim(),
-//                 'user' // You can pass actual user ID from session/token
-//             )
-//             if (!statusChangeResult.success) {
-//                 return NextResponse.json(
-//                     {
-//                         success: false,
-//                         error: statusChangeResult.error || 'Failed to record status change'
-//                     },
-//                     { status: 500 }
-//                 )
-//             }
-//             // Also update statusChangedAt if provided
-//             if (statusChangedAt) {
-//                 updateData.statusChangedAt = new Date(statusChangedAt)
-//             } else {
-//                 updateData.statusChangedAt = new Date()
-//             }
-//         }
-//         const result = await db.collection(TRIPS_COLLECTION).updateOne(
-//             { _id: new ObjectId(id) },
-//             { $set: updateData }
-//         )
-//         if (result.matchedCount === 0) {
-//             return NextResponse.json(
-//                 { success: false, error: 'Trip not found' },
-//                 { status: 404 }
-//             )
-//         }
-//         return NextResponse.json({
-//             success: true,
-//             message: 'Trip updated successfully',
-//             data: {
-//                 _id: id,
-//                 ...updateData
-//             }
-//         })
-//     } catch (error) {
-//         console.error('PUT trip error:', error)
-//         return NextResponse.json(
-//             {
-//                 success: false,
-//                 error: error.message,
-//                 message: 'Failed to update trip'
-//             },
-//             { status: 500 }
-//         )
-//     }
-// }
 /* ================= PUT - UPDATE TRIP ================= */
 export async function PUT(req) {
     try {
@@ -719,29 +293,24 @@ export async function PUT(req) {
             distanceKm,
             selectedRoute
         } = await req.json()
-
         if (!id) {
             return NextResponse.json(
                 { success: false, error: 'ID is required' },
                 { status: 400 }
             )
         }
-
         const db = await getDB()
-
         // Check if trip exists
         const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
             _id: new ObjectId(id),
             isDeleted: { $ne: true }
         })
-
         if (!existingTrip) {
             return NextResponse.json(
                 { success: false, error: 'Trip not found' },
                 { status: 404 }
             )
         }
-
         // Calculate total diesel amount
         let calculatedDieselAmount = totalDieselAmount
         if (!calculatedDieselAmount) {
@@ -751,10 +320,8 @@ export async function PUT(req) {
                 calculatedDieselAmount = (parseFloat(finalDieselLtr) * parseFloat(finalDieselRate)).toFixed(2)
             }
         }
-
         // Determine if status is changing
         const isStatusChanging = tripStatus !== undefined && tripStatus !== existingTrip.tripStatus
-
         // Validate remarks if status is changing
         if (isStatusChanging) {
             if (!statusRemarks || !statusRemarks.trim()) {
@@ -768,23 +335,19 @@ export async function PUT(req) {
                 )
             }
         }
-
         // Get final routeCode from either direct field or selectedRoute object
         let finalRouteCode = existingTrip.routeCode;
         let finalDistanceKm = existingTrip.distanceKm;
-
         if (routeCode !== undefined) {
             finalRouteCode = routeCode;
         } else if (selectedRoute?.routeCode) {
             finalRouteCode = selectedRoute.routeCode;
         }
-
         if (distanceKm !== undefined) {
             finalDistanceKm = distanceKm;
         } else if (selectedRoute?.distanceKm) {
             finalDistanceKm = selectedRoute.distanceKm;
         }
-
         // Prepare update data
         const updateData = {
             ...(vehicleNo !== undefined && { vehicleNo: vehicleNo.trim() }),
@@ -812,12 +375,10 @@ export async function PUT(req) {
             ...(distanceKm !== undefined && { distanceKm: Number(finalDistanceKm) }),
             updatedAt: new Date()
         }
-
         // Check for duplicate trip (if vehicleNo or tripDate changed)
         if (vehicleNo || tripDate) {
             const checkVehicleNo = vehicleNo || existingTrip.vehicleNo
             const checkTripDate = tripDate || existingTrip.tripDate
-
             // Check 1: No duplicate on same date
             const duplicateTrip = await db.collection(TRIPS_COLLECTION).findOne({
                 vehicleNo: checkVehicleNo,
@@ -825,7 +386,6 @@ export async function PUT(req) {
                 _id: { $ne: new ObjectId(id) },
                 isDeleted: { $ne: true }
             })
-
             if (duplicateTrip) {
                 return NextResponse.json(
                     {
@@ -836,7 +396,6 @@ export async function PUT(req) {
                     { status: 409 }
                 )
             }
-
             // Check 2: If vehicle is being changed, ensure it doesn't exceed 2 trips
             if (vehicleNo && vehicleNo !== existingTrip.vehicleNo) {
                 const totalTripsForNewVehicle = await db.collection(TRIPS_COLLECTION).countDocuments({
@@ -844,7 +403,6 @@ export async function PUT(req) {
                     _id: { $ne: new ObjectId(id) },
                     isDeleted: { $ne: true }
                 })
-
                 if (totalTripsForNewVehicle >= 2) {
                     return NextResponse.json(
                         {
@@ -857,7 +415,6 @@ export async function PUT(req) {
                 }
             }
         }
-
         // Record status change if status is being updated
         if (isStatusChanging) {
             const statusChangeResult = await recordStatusChange(
@@ -868,7 +425,6 @@ export async function PUT(req) {
                 statusRemarks.trim(),
                 'user'
             )
-
             if (!statusChangeResult.success) {
                 return NextResponse.json(
                     {
@@ -878,7 +434,6 @@ export async function PUT(req) {
                     { status: 500 }
                 )
             }
-
             // Also update statusChangedAt if provided
             if (statusChangedAt) {
                 updateData.statusChangedAt = new Date(statusChangedAt)
@@ -886,19 +441,16 @@ export async function PUT(req) {
                 updateData.statusChangedAt = new Date()
             }
         }
-
         const result = await db.collection(TRIPS_COLLECTION).updateOne(
             { _id: new ObjectId(id) },
             { $set: updateData }
         )
-
         if (result.matchedCount === 0) {
             return NextResponse.json(
                 { success: false, error: 'Trip not found' },
                 { status: 404 }
             )
         }
-
         return NextResponse.json({
             success: true,
             message: 'Trip updated successfully',
