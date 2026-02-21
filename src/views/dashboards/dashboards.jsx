@@ -19,7 +19,6 @@ import {
     Tabs,
     Tab
 } from '@mui/material'
-
 /* ===============================
    Remix Icon Helper
 ================================ */
@@ -29,10 +28,8 @@ const RI = ({ name, size = 22, color }) => (
         style={{ fontSize: size, color }}
     />
 )
-
 const LogisticsDashboard = () => {
     const [tabValue, setTabValue] = useState(0)
-
     /* ===============================
        Mock Data
     ================================ */
@@ -45,18 +42,15 @@ const LogisticsDashboard = () => {
         ownTrips: { inProcess: 12, completed: 156, cancelled: 8, total: 176 },
         marketTrips: { inProcess: 9, completed: 203, cancelled: 12, total: 224 }
     }
-
     const recentTrips = [
         { id: 'TRP-001', type: 'Own', vehicle: 'MH-12-AB-1234', driver: 'Rajesh Kumar', status: 'In Process', route: 'Mumbai → Delhi', progress: 65 },
         { id: 'TRP-002', type: 'Market', vehicle: 'DL-10-CD-5678', driver: 'Amit Sharma', status: 'In Process', route: 'Delhi → Jaipur', progress: 40 },
         { id: 'TRP-003', type: 'Own', vehicle: 'KA-05-EF-9012', driver: 'Suresh Reddy', status: 'Completed', route: 'Bangalore → Chennai', progress: 100 }
     ]
-
     const expiredDocuments = [
         { vehicle: 'MH-12-AB-1234', doc: 'Insurance', expiry: '2025-01-15', daysAgo: 8 },
         { vehicle: 'DL-10-CD-5678', doc: 'Fitness Certificate', expiry: '2025-01-10', daysAgo: 13 }
     ]
-
     /* ===============================
        Components
     ================================ */
@@ -82,7 +76,6 @@ const LogisticsDashboard = () => {
             </CardContent>
         </Card>
     )
-
     const TripStatsCard = ({ title, data, color, type }) => (
         <Card>
             <CardContent>
@@ -92,7 +85,6 @@ const LogisticsDashboard = () => {
                     </Avatar>
                     <Typography variant="h6">{title}</Typography>
                 </Box>
-
                 <Grid container spacing={2}>
                     <Grid item xs={6}>
                         <StatusBox icon="time-line" color="#ff9800" label="In Process" value={data.inProcess} />
@@ -113,7 +105,6 @@ const LogisticsDashboard = () => {
             </CardContent>
         </Card>
     )
-
     const StatusBox = ({ icon, color, label, value }) => (
         <Box textAlign="center" p={1} sx={{ bgcolor: '#f5f5f5', borderRadius: 1 }}>
             <RI name={icon} color={color} />
@@ -121,12 +112,10 @@ const LogisticsDashboard = () => {
             <Typography variant="caption">{label}</Typography>
         </Box>
     )
-
     const getStatusColor = (status) =>
         status === 'Completed' ? '#4caf50' :
             status === 'Cancelled' ? '#f44336' :
                 '#ff9800'
-
     /* ===============================
        Render
     ================================ */
@@ -142,7 +131,6 @@ const LogisticsDashboard = () => {
                     <RI name="refresh-line" color="white" />
                 </IconButton>
             </Box>
-
             {/* Stats */}
             <Grid container spacing={3} mb={3}>
                 <Grid item xs={12} md={2.4}><StatCard title="Own Vehicles" value={stats.ownVehicles} icon="car-line" color="#1976d2" trend="+5 this month" /></Grid>
@@ -151,20 +139,17 @@ const LogisticsDashboard = () => {
                 <Grid item xs={12} md={2.4}><StatCard title="Routes" value={stats.totalRoutes} icon="route-line" color="#4caf50" /></Grid>
                 <Grid item xs={12} md={2.4}><StatCard title="Expired Docs" value={stats.expiredDocs} icon="error-warning-line" color="#f44336" /></Grid>
             </Grid>
-
             {/* Trip Stats */}
             <Grid container spacing={3} mb={3}>
                 <Grid item xs={12} md={6}><TripStatsCard title="Own Trips" data={stats.ownTrips} color="#1976d2" type="own" /></Grid>
                 <Grid item xs={12} md={6}><TripStatsCard title="Market Trips" data={stats.marketTrips} color="#9c27b0" type="market" /></Grid>
             </Grid>
-
             {/* Tables */}
             <Card>
                 <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
                     <Tab label="Recent Trips" />
                     <Tab label="Expired Documents" />
                 </Tabs>
-
                 {tabValue === 0 && (
                     <TableContainer>
                         <Table>
@@ -203,5 +188,4 @@ const LogisticsDashboard = () => {
         </Box>
     )
 }
-
 export default LogisticsDashboard

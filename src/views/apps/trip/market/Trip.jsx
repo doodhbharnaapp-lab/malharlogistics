@@ -1115,7 +1115,7 @@ const TripInfo = () => {
     /* ---------------- API ENDPOINTS ---------------- */
     const API_BASE = '/api/apps'
     const TRIPS_API = `${API_BASE}/trip/market`
-    const ADVANCES_API = `${API_BASE}/trip/advance`
+    const ADVANCES_API = `${API_BASE}/trip/advance/market`
     const VEHICLES_API = `${API_BASE}/vehicles/market`
     const LOCATIONS_API = `${API_BASE}/location/info`
     /* ---------------- FILTERED DATA ---------------- */

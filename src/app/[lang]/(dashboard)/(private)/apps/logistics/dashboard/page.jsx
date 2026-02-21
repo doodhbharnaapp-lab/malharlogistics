@@ -15,6 +15,9 @@ import MarketTrip from '@/views/apps/logistics/dashboard/MarketTrip'
 import StatsCard from '@/views/apps/logistics/dashboard/Stats'
 import TabBasedTable from '@/views/apps/logistics/dashboard/TabBasedTable'
 import { CardHeader } from '@mui/material'
+import TopReferralSources from '@/views/dashboards/ecommerce/TopReferralSources'
+import TabBasedVehicleModels from '@/views/apps/logistics/dashboard/OwnTabBasedVehicleModels'
+import MarketTabBasedVehicleModels from '@/views/apps/logistics/dashboard/MArketTabBasedVehicleModels'
 const LogisticsDashboard = async () => {
   // Vars
   const data = await getStatisticsData()
@@ -34,6 +37,12 @@ const LogisticsDashboard = async () => {
         <Grid item xs={12} md={6}>
           <StatsCard />
         </Grid>
+        <Grid item xs={12} md={6}>
+
+          < TabBasedVehicleModels />
+        </Grid>
+        < MarketTabBasedVehicleModels />
+
         <Grid item xs={12} md={12}>
           <TabBasedTable />
         </Grid>

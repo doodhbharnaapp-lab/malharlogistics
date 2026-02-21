@@ -79,6 +79,8 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           <SubMenu label={"Reports"} icon={<i className='ri-pages-line' />}>
             <MenuItem href={`/${locale}/apps/trip/report`}>{'Trip Report'}</MenuItem>
             <MenuItem href={`/${locale}/apps/trip/advance/reports`}>{'Advance Report'}</MenuItem>
+            <MenuItem href={`/${locale}/apps/trip/report/market`}>{'Market Trip Report'}</MenuItem>
+            <MenuItem href={`/${locale}/apps/trip/advance/reports/market`}>{'Market Advance Report'}</MenuItem>
           </SubMenu>
           <SubMenu label={"Location"} icon={<i className='ri-map-pin-fill' />}>
             <MenuItem href={`/${locale}/apps/location/`}>{'Location'}</MenuItem>

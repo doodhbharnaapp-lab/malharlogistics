@@ -12,7 +12,6 @@ import Alert from '@mui/material/Alert'
 // Components Imports
 import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
-
 // Styled card for stats
 const StatsCard = ({ children, color }) => {
     return (
@@ -31,7 +30,6 @@ const StatsCard = ({ children, color }) => {
         </Card>
     )
 }
-
 const MarketTrip = () => {
     const [tripStats, setTripStats] = useState([
         {
@@ -83,7 +81,6 @@ const MarketTrip = () => {
                 const active = trips.filter(trip => trip.tripStatus === 'active').length
                 const completed = trips.filter(trip => trip.tripStatus === 'completed').length
                 const cancelled = trips.filter(trip => trip.tripStatus === 'cancelled').length
-
                 setTripStats([
                     {
                         stats: total.toString(),
@@ -118,17 +115,14 @@ const MarketTrip = () => {
             setLoading(false)
         }
     }
-
     useEffect(() => {
         fetchTripData()
     }, [])
-
     const handleMenuClick = (option) => {
         if (option === 'Refresh') {
             fetchTripData()
         }
     }
-
     if (loading) {
         return (
             <Card>
@@ -154,7 +148,6 @@ const MarketTrip = () => {
             </Card>
         )
     }
-
     if (error) {
         return (
             <Card>
@@ -175,7 +168,6 @@ const MarketTrip = () => {
             </Card>
         )
     }
-
     return (
         <Card>
             <CardHeader
@@ -220,11 +212,8 @@ const MarketTrip = () => {
                         </Grid>
                     ))}
                 </Grid>
-
-
             </CardContent>
         </Card>
     )
 }
-
 export default MarketTrip

@@ -37,7 +37,7 @@ import { useReactToPrint } from 'react-to-print'
 /* ================= CONSTANTS ================= */
 const columnHelper = createColumnHelper()
 /* ================================================= */
-const TripAdvanceReport = () => {
+const MarketAdvanceReport = () => {
     /* ================= STATE ================= */
     const [rows, setRows] = useState([])
     const [loading, setLoading] = useState(true)
@@ -62,8 +62,8 @@ const TripAdvanceReport = () => {
     const componentRef = useRef() // For printing
     /* ================= API ENDPOINTS ================= */
     const API_BASE = '/api/apps'
-    const TRIPS_API = `${API_BASE}/trip`
-    const ADVANCES_API = `${API_BASE}/trip/advance`
+    const TRIPS_API = `${API_BASE}/trip/market`
+    const ADVANCES_API = `${API_BASE}/trip/advance/market`
     /* ================= FETCH TRIPS WITH ADVANCES ================= */
     useEffect(() => {
         fetchTripsWithAdvances()
@@ -832,6 +832,7 @@ const TripAdvanceReport = () => {
                             </Button>
                         </div>
                     </div>
+                    {/* Search + Filters Row */}
                     <br />
                     <Divider />
                     <br />
@@ -1283,4 +1284,4 @@ const TripAdvanceReport = () => {
         </>
     )
 }
-export default TripAdvanceReport
+export default MarketAdvanceReport

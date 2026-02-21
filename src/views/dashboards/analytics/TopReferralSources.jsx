@@ -1,8 +1,6 @@
 'use client'
-
 // React Imports
 import { useState } from 'react'
-
 // MUI Import
 import Tab from '@mui/material/Tab'
 import Card from '@mui/material/Card'
@@ -12,17 +10,18 @@ import TabList from '@mui/lab/TabList'
 import TabPanel from '@mui/lab/TabPanel'
 import Avatar from '@mui/material/Avatar'
 import TabContext from '@mui/lab/TabContext'
-
 // Third-party Imports
 import classnames from 'classnames'
-
 // Components Imports
 import OptionMenu from '@core/components/option-menu'
-
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-
 const tabAvatars = [
+  {
+    imgWidth: 32.8,
+    imgHeight: 34,
+    category: 'google'
+  },
   {
     imgWidth: 32.8,
     imgHeight: 34,
@@ -44,7 +43,6 @@ const tabAvatars = [
     category: 'reddit'
   }
 ]
-
 const tabContentData = {
   google: [
     {
@@ -183,7 +181,6 @@ const tabContentData = {
     }
   ]
 }
-
 const RenderTabContent = ({ data }) => {
   return (
     <div className='overflow-x-auto'>
@@ -219,15 +216,12 @@ const RenderTabContent = ({ data }) => {
     </div>
   )
 }
-
 const TopReferralSources = () => {
   // State
   const [value, setValue] = useState('google')
-
   const handleChange = (event, newValue) => {
     setValue(newValue)
   }
-
   const RenderTabAvatar = ({ data }) => (
     <Avatar
       variant='rounded'
@@ -244,7 +238,6 @@ const TopReferralSources = () => {
       />
     </Avatar>
   )
-
   return (
     <Card>
       <CardHeader
@@ -282,7 +275,6 @@ const TopReferralSources = () => {
             }
           />
         </TabList>
-
         <TabPanel sx={{ p: 0 }} value='google'>
           <RenderTabContent data={tabContentData['google']} />
         </TabPanel>
@@ -299,5 +291,4 @@ const TopReferralSources = () => {
     </Card>
   )
 }
-
 export default TopReferralSources
