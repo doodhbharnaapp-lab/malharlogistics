@@ -67,10 +67,10 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 // Vars
 const userRoleObj = {
   admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+  account1: { icon: 'ri-computer-line', color: 'warning' },
+  account2: { icon: 'ri-edit-box-line', color: 'info' },
+  other: { icon: 'ri-pie-chart-2-line', color: 'success' },
+  driver: { icon: 'ri-user-3-line', color: 'primary' }
 }
 const userStatusObj = {
   active: 'success',
@@ -234,22 +234,20 @@ const UserListTable = () => { // Remove tableData prop
             >
               <i className='ri-delete-bin-7-line text-textSecondary' />
             </IconButton>
-            <IconButton size='small'>
-              <Link
-                href={getLocalizedUrl(`/apps/user/view/${row.original.id}`, locale)}
-                className='flex'
-              >
-                <i className='ri-eye-line text-textSecondary' />
-              </Link>
+            <IconButton
+              size='small'
+              onClick={() => {
+                setEditingUser(row.original)
+                setAddUserOpen(true)
+              }}
+              disabled={isLoading}
+            >
+              <i className='ri-edit-box-line text-textSecondary' />
             </IconButton>
-            <OptionMenu
+
+            {/* <OptionMenu
               iconClassName='text-textSecondary'
               options={[
-                {
-                  text: 'Download',
-                  icon: 'ri-download-line',
-                  onClick: () => console.log('Download', row.original.id)
-                },
                 {
                   text: 'Edit',
                   icon: 'ri-edit-box-line',
@@ -259,7 +257,7 @@ const UserListTable = () => { // Remove tableData prop
                   }
                 }
               ]}
-            />
+            /> */}
           </div>
         ),
         enableSorting: false

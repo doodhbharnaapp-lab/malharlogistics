@@ -1941,9 +1941,17 @@ const AdvanceRegister = () => {
     }
     /* ================= CLOSE MODALS ================= */
     const handleCloseModal = async () => {
-        setOpen(false)
-        await fetchTrips()
-    }
+        setAdvanceForm(prev => ({
+            ...prev,
+            advanceType: '',
+            amount: '',
+            remark: ''
+            // ❌ do NOT touch date
+        }));
+
+        setOpen(false);
+        fetchTrips();
+    };
     const handleCloseProceedModal = async () => {
         setProceedOpen(false)
         await fetchTrips()
@@ -2356,10 +2364,10 @@ const AdvanceRegister = () => {
                             /* SELECT TRIP FOR ADDING ADVANCE */
                             <div className="flex flex-col gap-4">
                                 <Typography variant="h6" className="mb-3">Select a Trip</Typography>
-                                <Alert severity="info" sx={{ mb: 2 }}>
+                                {/* <Alert severity="info" sx={{ mb: 2 }}>
                                     <strong>Important:</strong> A vehicle can only have ONE active trip at a time.
                                     Previous trips must be closed/completed/cancelled before starting a new one.
-                                </Alert>
+                                </Alert> */}
                                 <Autocomplete
                                     options={rows.filter(row =>
                                         row.vehicleNo &&
@@ -2704,7 +2712,8 @@ const AdvanceRegister = () => {
                                                 </TextField>
                                                 <TextField
                                                     label="Amount"
-                                                    type="number"
+                                                    type="text"
+                                                    inputMode='numeric'
                                                     value={advanceForm.amount}
                                                     fullWidth
                                                     disabled={formLoading}
@@ -2724,37 +2733,71 @@ const AdvanceRegister = () => {
                                                     helperText={`Max: ${availableBalance.toFixed(2)}`}
                                                     error={parseFloat(advanceForm.amount || 0) > availableBalance}
                                                 />
-                                                <DatePicker
+                                                {/* <DatePicker
                                                     label="Date"
-                                                    value={new Date(advanceForm.date)}
+                                                    value={advanceForm.date ? new Date(advanceForm.date) : null}
                                                     onChange={(newDate) => {
-                                                        const formattedDate = newDate.toISOString().split('T')[0]
-                                                        setAdvanceForm(prev => ({
+                                                        if (!newDate) return;
+
+                                                        const formattedDate = newDate.toISOString().split("T")[0];
+
+                                                        setAdvanceForm((prev) => ({
                                                             ...prev,
-                                                            date: formattedDate
-                                                        }))
+                                                            date: formattedDate,
+                                                        }));
                                                     }}
                                                     slotProps={{
                                                         textField: {
                                                             fullWidth: true,
-                                                            error: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType),
-                                                            helperText: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)
-                                                                ? 'Already proposed on this date'
-                                                                : ''
-                                                        }
+                                                            inputProps: { readOnly: true }, // ✅ READ ONLY HERE
+                                                            error:
+                                                                advanceForm.advanceType &&
+                                                                checkAdvanceExistsOnDate(
+                                                                    advanceForm.date,
+                                                                    advanceForm.advanceType
+                                                                ),
+                                                            helperText:
+                                                                advanceForm.advanceType &&
+                                                                    checkAdvanceExistsOnDate(
+                                                                        advanceForm.date,
+                                                                        advanceForm.advanceType
+                                                                    )
+                                                                    ? "Already proposed on this date"
+                                                                    : "",
+                                                        },
                                                     }}
                                                     format="dd/MM/yyyy"
                                                     shouldDisableDate={(date) => {
-                                                        // Optionally disable dates that already have all advance types used
-                                                        const dateStr = date.toISOString().split('T')[0]
-                                                        const advancesOnDate = trip.advances?.filter(adv => adv.date === dateStr) || []
-                                                        const usedTypesOnDate = advancesOnDate.map(adv => adv.advanceType)
-                                                        const availableTypes = getAvailableAdvanceTypes()
-                                                        // Disable date if all advance types are already used on this date
-                                                        return availableTypes.length > 0 &&
-                                                            availableTypes.every(type => usedTypesOnDate.includes(type))
+                                                        const dateStr = date.toISOString().split("T")[0];
+                                                        const advancesOnDate =
+                                                            trip.advances?.filter((adv) => adv.date === dateStr) || [];
+
+                                                        const usedTypesOnDate = advancesOnDate.map(
+                                                            (adv) => adv.advanceType
+                                                        );
+
+                                                        const availableTypes = getAvailableAdvanceTypes();
+
+                                                        return (
+                                                            availableTypes.length > 0 &&
+                                                            availableTypes.every((type) =>
+                                                                usedTypesOnDate.includes(type)
+                                                            )
+                                                        );
                                                     }}
+                                                /> */}
+                                                <DatePicker
+                                                    label="Date"
+                                                    value={advanceForm.date ? new Date(advanceForm.date) : null}
+                                                    disabled   // ✅ completely read-only
+                                                    slotProps={{
+                                                        textField: {
+                                                            fullWidth: true
+                                                        }
+                                                    }}
+                                                    format="dd/MM/yyyy"
                                                 />
+
                                                 <TextField
                                                     label="Remark"
                                                     value={advanceForm.remark}

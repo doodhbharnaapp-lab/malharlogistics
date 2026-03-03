@@ -511,11 +511,11 @@ const LocationInfo = () => {
     }
     // ---------------- TABLE ----------------
     const columns = useMemo(() => [
-        columnHelper.accessor('srno', {
-            header: 'SR',
-            cell: ({ row }) => row.original.srno || '-',
-            size: 50
-        }),
+        // columnHelper.accessor('srno', {
+        //     header: 'SR',
+        //     cell: ({ row }) => row.original.srno || '-',
+        //     size: 50
+        // }),
         columnHelper.accessor('fromLocation', {
             header: 'From',
             cell: ({ row }) => row.original.fromLocation?.locationName || '-',

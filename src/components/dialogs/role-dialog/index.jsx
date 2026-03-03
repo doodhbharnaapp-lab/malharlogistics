@@ -421,25 +421,25 @@ const MODULES = [
   { module: 'Market Advance', access: ['read', 'write', 'create', 'delete'] },
 
   // Disputes Management
-  { module: 'Disputes Management', access: ['read', 'write', 'create', 'delete'] },
+  // { module: 'Disputes Management', access: ['read', 'write', 'create', 'delete'] },
 
-  // Database Management
-  { module: 'Database Management', access: ['read', 'write', 'create', 'delete'] },
+  // // Database Management
+  // { module: 'Database Management', access: ['read', 'write', 'create', 'delete'] },
 
-  // Financial Management
-  { module: 'Financial Management', access: ['read', 'write', 'create', 'delete'] },
+  // // Financial Management
+  // { module: 'Financial Management', access: ['read', 'write', 'create', 'delete'] },
 
-  // Reporting
-  { module: 'Reporting', access: ['read', 'write', 'create', 'delete'] },
+  // // Reporting
+  // { module: 'Reporting', access: ['read', 'write', 'create', 'delete'] },
 
-  // API Control
-  { module: 'API Control', access: ['read', 'write', 'create', 'delete'] },
+  // // API Control
+  // { module: 'API Control', access: ['read', 'write', 'create', 'delete'] },
 
-  // Repository Management
-  { module: 'Repository Management', access: ['read', 'write', 'create', 'delete'] },
+  // // Repository Management
+  // { module: 'Repository Management', access: ['read', 'write', 'create', 'delete'] },
 
-  // Payroll
-  { module: 'Payroll', access: ['read', 'write', 'create', 'delete'] }
+  // // Payroll
+  // { module: 'Payroll', access: ['read', 'write', 'create', 'delete'] }
 ]
 
 // Helper function to generate permission ID

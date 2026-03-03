@@ -604,7 +604,8 @@ import { authOptions } from '@/libs/auth'
 import { PERMISSIONS } from '@/libs/permissions'
 import { checkPermission, checkAnyPermission, hasPermission, checkBulkPermission } from '@/utils/checkPermission'
 // ❌ checkSinglePermission AB NAHI HAI
-// ✅ hasPermission add hua haiconst TRIPS_COLLECTION = 'trips'
+// ✅ hasPermission add hua hai
+const TRIPS_COLLECTION = 'trips'
 const ADVANCES_COLLECTION = 'advances'
 const client = new MongoClient(process.env.DATABASE_URL)
 async function getDB() {

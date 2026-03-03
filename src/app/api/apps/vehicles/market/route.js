@@ -4,7 +4,6 @@
 // import { authOptions } from '@/libs/auth'
 // import { PERMISSIONS } from '@/libs/permissions'
 // import { checkPermission, checkAnyPermission } from '@/utils/checkPermission'
-
 // /* ===========================
 //    Mongo Connection
 // =========================== */
@@ -253,7 +252,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/libs/auth'
 import { PERMISSIONS } from '@/libs/permissions'
 import { checkPermission, checkAnyPermission } from '@/utils/checkPermission'
-
 /* ===========================
    Mongo Connection
 =========================== */
@@ -262,7 +260,6 @@ async function getDB() {
     await client.connect()
     return client.db()
 }
-
 /* ===========================
    Helpers
 =========================== */
@@ -279,7 +276,6 @@ function normalizeDocuments(documents = []) {
         }
     })
 }
-
 /* ===========================
    GET - with READ permission
 =========================== */
@@ -289,25 +285,21 @@ export async function GET(req) {
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
-
         // ✅ CHECK PERMISSION - marketVehicles:read
         const hasPermission = await checkAnyPermission([
             PERMISSIONS.marketVehicles.READ,
             PERMISSIONS.marketVehicles.CREATE,
             PERMISSIONS.marketVehicles.WRITE
         ])(async () => true)(req)
-
         if (!hasPermission && session.user.role !== 'admin') {
             return NextResponse.json({
                 error: 'Forbidden',
                 message: 'You need marketVehicles:read permission'
             }, { status: 403 })
         }
-
         const { searchParams } = new URL(req.url)
         const id = searchParams.get('id')
         const db = await getDB()
-
         /* ===== SINGLE VEHICLE ===== */
         if (id) {
             const vehicle = await db.collection('marketvehicles').findOne({
@@ -316,20 +308,17 @@ export async function GET(req) {
             })
             return NextResponse.json({ success: true, data: vehicle })
         }
-
         /* ===== VEHICLE LIST ===== */
         const vehicles = await db.collection('marketvehicles')
             .find({ isDeleted: { $ne: true } })
             .sort({ createdAt: -1 })
             .toArray()
-
         return NextResponse.json({ success: true, data: vehicles })
     } catch (err) {
         console.error('GET vehicles error:', err)
         return NextResponse.json({ error: 'Server error' }, { status: 500 })
     }
 }
-
 /* ===========================
    POST – Create Vehicle - with CREATE permission
 =========================== */
@@ -339,20 +328,16 @@ export const POST = checkPermission(PERMISSIONS.marketVehicles.CREATE)(
             const session = await getServerSession(authOptions)
             const data = await req.json()
             const db = await getDB()
-
             if (!data.vehicleNo || !data.vehicleModel) {
                 return NextResponse.json({ error: 'Required fields missing' }, { status: 400 })
             }
-
             const exists = await db.collection('marketvehicles').findOne({
                 vehicleNo: data.vehicleNo,
                 isDeleted: { $ne: true }
             })
-
             if (exists) {
                 return NextResponse.json({ error: 'Vehicle already exists' }, { status: 400 })
             }
-
             const vehicle = {
                 vehicleNo: data.vehicleNo,
                 model: data.vehicleModel,
@@ -372,7 +357,6 @@ export const POST = checkPermission(PERMISSIONS.marketVehicles.CREATE)(
                 updatedAt: new Date(),
                 createdBy: session.user.id
             }
-
             const result = await db.collection('marketvehicles').insertOne(vehicle)
             return NextResponse.json({ success: true, id: result.insertedId })
         } catch (err) {
@@ -381,7 +365,6 @@ export const POST = checkPermission(PERMISSIONS.marketVehicles.CREATE)(
         }
     }
 )
-
 /* ===========================
    PUT – Update Vehicle - with WRITE permission
 =========================== */
@@ -390,13 +373,10 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
         try {
             const session = await getServerSession(authOptions)
             const data = await req.json()
-
             if (!data.id) {
                 return NextResponse.json({ error: 'Vehicle ID required' }, { status: 400 })
             }
-
             const db = await getDB()
-
             // Check if this is a bulk operation
             if (data.ids && Array.isArray(data.ids) && data.ids.length > 0) {
                 // ✅ BULK OPERATION - check bulk permission
@@ -404,7 +384,6 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
                     const hasBulkPermission = await checkAnyPermission([
                         PERMISSIONS.marketVehicles.BULK_UPDATE
                     ])(async () => true)(req)
-
                     if (!hasBulkPermission) {
                         return NextResponse.json({
                             error: 'Forbidden',
@@ -412,7 +391,6 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
                         }, { status: 403 })
                     }
                 }
-
                 // Bulk update
                 const objectIds = data.ids.map(id => new ObjectId(id))
                 const result = await db.collection('marketvehicles').updateMany(
@@ -430,18 +408,14 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
                     message: `${result.modifiedCount} vehicles updated`
                 })
             }
-
             // SINGLE VEHICLE UPDATE
             const existing = await db.collection('marketvehicles').findOne({
                 _id: new ObjectId(data.id)
             })
-
             if (!existing) {
                 return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 })
             }
-
             const update = { updatedAt: new Date() }
-
             if (data.vehicleNo !== undefined) update.vehicleNo = data.vehicleNo
             if (data.model !== undefined) update.model = data.model
             if (data.vehicleModel !== undefined) update.model = data.vehicleModel
@@ -456,12 +430,10 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
             if (data.isActive !== undefined) update.isActive = data.isActive
             if (data.isMarket !== undefined) update.isMarket = data.isMarket
             if (data.documents !== undefined) update.documents = normalizeDocuments(data.documents)
-
             await db.collection('marketvehicles').updateOne(
                 { _id: new ObjectId(data.id) },
                 { $set: update }
             )
-
             return NextResponse.json({ success: true })
         } catch (err) {
             console.error('PUT vehicle error:', err)
@@ -469,7 +441,6 @@ export const PUT = checkPermission(PERMISSIONS.marketVehicles.WRITE)(
         }
     }
 )
-
 /* ===========================
    DELETE – Soft Delete - with DELETE permission
 =========================== */
@@ -479,14 +450,12 @@ export const DELETE = checkPermission(PERMISSIONS.marketVehicles.DELETE)(
             const session = await getServerSession(authOptions)
             const { searchParams } = new URL(req.url)
             const id = searchParams.get('id')
-
             if (!id) {
                 return NextResponse.json(
                     { error: 'Vehicle ID is required' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
             const result = await db.collection('marketvehicles').updateOne(
                 { _id: new ObjectId(id) },
@@ -498,14 +467,12 @@ export const DELETE = checkPermission(PERMISSIONS.marketVehicles.DELETE)(
                     }
                 }
             )
-
             if (result.matchedCount === 0) {
                 return NextResponse.json(
                     { error: 'Vehicle not found' },
                     { status: 404 }
                 )
             }
-
             return NextResponse.json({ success: true })
         } catch (error) {
             console.error('DELETE error:', error)
@@ -516,7 +483,6 @@ export const DELETE = checkPermission(PERMISSIONS.marketVehicles.DELETE)(
         }
     }
 )
-
 /* ===========================
    BULK DELETE - with BULK_DELETE permission
 =========================== */
@@ -525,17 +491,14 @@ export const POST_BULK_DELETE = checkPermission(PERMISSIONS.marketVehicles.BULK_
         try {
             const session = await getServerSession(authOptions)
             const data = await req.json()
-
             if (!data.ids || !Array.isArray(data.ids) || data.ids.length === 0) {
                 return NextResponse.json(
                     { error: 'Vehicle IDs are required' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
             const objectIds = data.ids.map(id => new ObjectId(id))
-
             const result = await db.collection('marketvehicles').updateMany(
                 { _id: { $in: objectIds } },
                 {
@@ -546,7 +509,6 @@ export const POST_BULK_DELETE = checkPermission(PERMISSIONS.marketVehicles.BULK_
                     }
                 }
             )
-
             return NextResponse.json({
                 success: true,
                 message: `${result.modifiedCount} vehicles deleted`
@@ -560,7 +522,6 @@ export const POST_BULK_DELETE = checkPermission(PERMISSIONS.marketVehicles.BULK_
         }
     }
 )
-
 /* ===========================
    BULK STATUS UPDATE - with BULK_STATUS permission
 =========================== */
@@ -569,24 +530,20 @@ export const POST_BULK_STATUS = checkPermission(PERMISSIONS.marketVehicles.BULK_
         try {
             const session = await getServerSession(authOptions)
             const data = await req.json()
-
             if (!data.ids || !Array.isArray(data.ids) || data.ids.length === 0) {
                 return NextResponse.json(
                     { error: 'Vehicle IDs are required' },
                     { status: 400 }
                 )
             }
-
             if (data.isActive === undefined) {
                 return NextResponse.json(
                     { error: 'Status (isActive) is required' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
             const objectIds = data.ids.map(id => new ObjectId(id))
-
             const result = await db.collection('marketvehicles').updateMany(
                 { _id: { $in: objectIds } },
                 {
@@ -597,7 +554,6 @@ export const POST_BULK_STATUS = checkPermission(PERMISSIONS.marketVehicles.BULK_
                     }
                 }
             )
-
             return NextResponse.json({
                 success: true,
                 message: `${result.modifiedCount} vehicles status updated`
@@ -611,7 +567,6 @@ export const POST_BULK_STATUS = checkPermission(PERMISSIONS.marketVehicles.BULK_
         }
     }
 )
-
 /* ===========================
    Get Active Vehicle Count
 =========================== */

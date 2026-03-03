@@ -357,3 +357,280 @@ export async function POST(req) {
 }
 
 // Similar changes for PUT and DELETE...
+/* ================= UPDATE USER ================= */
+export async function PUT(req) {
+  try {
+    // Check if user has permission to update users
+    const permissionCheck = await checkPermission('user-management-update')
+    if (permissionCheck.error) {
+      return NextResponse.json(
+        { error: permissionCheck.error },
+        { status: permissionCheck.status }
+      )
+    }
+
+    // Get the user ID from the URL query parameters
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+
+    // Also check if ID is in the body (for flexibility)
+    const body = await req.json()
+    const userId = id || body.id
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const db = await getDB()
+    const usersCollection = db.collection('users')
+
+    // Validate ObjectId
+    let objectId
+    try {
+      objectId = new ObjectId(userId)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid user ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Check if user exists
+    const existingUser = await usersCollection.findOne({ _id: objectId })
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Prevent non-admin users from changing roles to admin
+    const currentUserRole = permissionCheck.session.user.role
+    const { name, email, role, contact, isActive, password } = body
+
+    // Build update object (only include fields that are provided)
+    const updateData = {}
+
+    if (name !== undefined) updateData.name = name
+    if (email !== undefined) {
+      // Check if email is already taken by another user
+      if (email !== existingUser.email) {
+        const emailExists = await usersCollection.findOne({
+          email,
+          _id: { $ne: objectId }
+        })
+        if (emailExists) {
+          return NextResponse.json(
+            { error: 'Email already in use by another user' },
+            { status: 409 }
+          )
+        }
+      }
+      updateData.email = email
+    }
+
+    if (contact !== undefined) updateData.contact = contact
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    // Handle role changes with proper permissions
+    if (role !== undefined && role !== existingUser.role) {
+      // Only admins can change roles
+      if (currentUserRole !== 'admin') {
+        return NextResponse.json(
+          { error: 'Only admins can change user roles' },
+          { status: 403 }
+        )
+      }
+
+      // Validate that the role exists
+      const roleExists = await db.collection('roles').findOne({ name: role })
+      if (!roleExists) {
+        return NextResponse.json(
+          { error: `Role '${role}' does not exist` },
+          { status: 400 }
+        )
+      }
+
+      // Prevent changing your own role if you're updating yourself
+      if (existingUser.email === permissionCheck.session.user.email) {
+        return NextResponse.json(
+          { error: 'You cannot change your own role' },
+          { status: 403 }
+        )
+      }
+
+      updateData.role = role
+    }
+
+    // Handle password update
+    if (password) {
+      // Only allow password update if:
+      // 1. User is updating their own password, OR
+      // 2. User is an admin
+      const isOwnAccount = existingUser.email === permissionCheck.session.user.email
+      if (!isOwnAccount && currentUserRole !== 'admin') {
+        return NextResponse.json(
+          { error: 'You can only change your own password' },
+          { status: 403 }
+        )
+      }
+
+      // Add password validation here if needed
+      if (password.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters long' },
+          { status: 400 }
+        )
+      }
+
+      updateData.password = await bcrypt.hash(password, 10)
+    }
+
+    // Add timestamp
+    updateData.updatedAt = new Date()
+    updateData.updatedBy = permissionCheck.session.user.email
+
+    // If no fields to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      )
+    }
+
+    // Update the user
+    const result = await usersCollection.updateOne(
+      { _id: objectId },
+      { $set: updateData }
+    )
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json(
+        { error: 'Failed to update user' },
+        { status: 500 }
+      )
+    }
+
+    // Fetch the updated user (without password)
+    const updatedUser = await usersCollection.findOne(
+      { _id: objectId },
+      { projection: { password: 0 } }
+    )
+
+    return NextResponse.json(
+      {
+        message: 'User updated successfully',
+        user: {
+          id: updatedUser._id.toString(),
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          contact: updatedUser.contact,
+          isActive: updatedUser.isActive,
+          updatedAt: updatedUser.updatedAt
+        }
+      },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('PUT user error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update user' },
+      { status: 500 }
+    )
+  }
+}
+/* ================= DELETE USER ================= */
+export async function DELETE(req) {
+  try {
+    // Check if user has permission to delete users
+    const permissionCheck = await checkPermission('user-management-delete')
+    if (permissionCheck.error) {
+      return NextResponse.json(
+        { error: permissionCheck.error },
+        { status: permissionCheck.status }
+      )
+    }
+
+    // Get the user ID from the URL query parameters
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const db = await getDB()
+    const usersCollection = db.collection('users')
+
+    // Check if user exists
+    let objectId
+    try {
+      objectId = new ObjectId(id)
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid user ID format' },
+        { status: 400 }
+      )
+    }
+
+    const user = await usersCollection.findOne({ _id: objectId })
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Prevent deleting yourself
+    const currentUserEmail = permissionCheck.session.user.email
+    if (user.email === currentUserEmail) {
+      return NextResponse.json(
+        { error: 'You cannot delete your own account' },
+        { status: 403 }
+      )
+    }
+
+    // Prevent deleting admin users unless you're an admin
+    if (user.role === 'admin' && permissionCheck.session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Cannot delete admin users' },
+        { status: 403 }
+      )
+    }
+
+    // Delete the user
+    const result = await usersCollection.deleteOne({ _id: objectId })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { error: 'Failed to delete user' },
+        { status: 500 }
+      )
+    }
+
+    // Optional: Also delete related data (sessions, etc.)
+    // await db.collection('sessions').deleteMany({ userId: objectId })
+
+    return NextResponse.json(
+      {
+        message: 'User deleted successfully',
+        id: id
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('DELETE user error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete user' },
+      { status: 500 }
+    )
+  }
+}

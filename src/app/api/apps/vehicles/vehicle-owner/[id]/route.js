@@ -1,4 +1,4 @@
-// app/api/apps/vehicles/vehicle-owner/route.js
+// app/api/apps/vehicles/vehicle-owner/[id]/route.js
 import { NextResponse } from 'next/server'
 import { MongoClient, ObjectId } from 'mongodb'
 import { getServerSession } from 'next-auth'
@@ -6,54 +6,13 @@ import { authOptions } from '@/libs/auth'
 import { PERMISSIONS } from '@/libs/permissions'
 import { checkPermission } from '@/utils/checkPermission'
 
-// ✅ GET all owners with permission check
-export const GET = checkPermission(PERMISSIONS.vehicleOwners.READ)(
-    async function GET(request) {
-        console.log('🚗 GET /api/vehicle-owners')
-        let client
-        try {
-            const session = await getServerSession(authOptions)
-            client = new MongoClient(process.env.DATABASE_URL)
-            await client.connect()
-            const db = client.db()
-
-            const owners = await db.collection('vehicleOwners')
-                .find({})
-                .sort({ createdAt: -1 })
-                .toArray()
-
-            const formattedOwners = owners.map((owner, index) => ({
-                id: owner._id.toString(),
-                ownerId: `VO${String(index + 1).padStart(3, '0')}`,
-                ownerName: owner.fullName || 'Unknown',
-                mobile: owner.mobile || 'Not provided',
-                isActive: owner.isActive !== false
-            }))
-
-            return NextResponse.json({
-                success: true,
-                data: formattedOwners,
-                count: formattedOwners.length
-            })
-        } catch (error) {
-            console.error('❌ Error:', error)
-            return NextResponse.json(
-                { error: 'Failed to fetch owners' },
-                { status: 500 }
-            )
-        } finally {
-            if (client) await client.close()
-        }
-    }
-)
-
 // ✅ GET single owner by ID
-export const GET_BY_ID = checkPermission(PERMISSIONS.vehicleOwners.READ)(
-    async function GET_BY_ID(request, { params }) {
+export const GET = checkPermission(PERMISSIONS.vehicleOwners.READ)(
+    async function GET(request, { params }) {
         console.log('🚗 GET /api/vehicle-owners/[id]')
         let client
         try {
-            const { id } = params
+            const { id } = await params
             const session = await getServerSession(authOptions)
 
             if (!id) {
@@ -101,78 +60,17 @@ export const GET_BY_ID = checkPermission(PERMISSIONS.vehicleOwners.READ)(
     }
 )
 
-// ✅ POST create new owner with permission check
-export const POST = checkPermission(PERMISSIONS.vehicleOwners.CREATE)(
-    async function POST(request) {
-        console.log('🚗 POST /api/vehicle-owners')
-        let client
-        try {
-            const session = await getServerSession(authOptions)
-            const data = await request.json()
-
-            if (!data.fullName || !data.mobile) {
-                return NextResponse.json(
-                    { error: 'Full name and mobile required' },
-                    { status: 400 }
-                )
-            }
-
-            // Check if mobile number already exists
-            client = new MongoClient(process.env.DATABASE_URL)
-            await client.connect()
-            const db = client.db()
-
-            const existingOwner = await db.collection('vehicleOwners').findOne({
-                mobile: data.mobile
-            })
-
-            if (existingOwner) {
-                return NextResponse.json(
-                    { error: 'Owner with this mobile number already exists' },
-                    { status: 409 }
-                )
-            }
-
-            const newOwner = {
-                fullName: data.fullName,
-                mobile: data.mobile,
-                isActive: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                createdBy: session?.user?.email || 'system'
-            }
-
-            const result = await db.collection('vehicleOwners').insertOne(newOwner)
-
-            return NextResponse.json({
-                success: true,
-                data: {
-                    ...newOwner,
-                    _id: result.insertedId,
-                    id: result.insertedId.toString()
-                }
-            }, { status: 201 })
-        } catch (error) {
-            console.error('❌ Error:', error)
-            return NextResponse.json(
-                { error: 'Failed to create owner' },
-                { status: 500 }
-            )
-        } finally {
-            if (client) await client.close()
-        }
-    }
-)
-
 // ✅ PUT update owner by ID
 export const PUT = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
     async function PUT(request, { params }) {
         console.log('🚗 PUT /api/vehicle-owners/[id]')
         let client
         try {
-            const { id } = params
+            const { id } = await params
             const session = await getServerSession(authOptions)
             const data = await request.json()
+
+            console.log('Update data received:', data) // Add this for debugging
 
             if (!id) {
                 return NextResponse.json(
@@ -181,9 +79,16 @@ export const PUT = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
                 )
             }
 
-            if (!data.fullName || !data.mobile) {
+            // Check for either fullName or ownerName
+            const fullName = data.fullName || data.ownerName
+            const mobile = data.mobile
+
+            if (!fullName || !mobile) {
                 return NextResponse.json(
-                    { error: 'Full name and mobile required' },
+                    {
+                        error: 'Full name and mobile required',
+                        received: { fullName, mobile, originalData: data }
+                    },
                     { status: 400 }
                 )
             }
@@ -194,7 +99,7 @@ export const PUT = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
 
             // Check if mobile number already exists for another owner
             const existingOwner = await db.collection('vehicleOwners').findOne({
-                mobile: data.mobile,
+                mobile: mobile,
                 _id: { $ne: new ObjectId(id) }
             })
 
@@ -206,8 +111,8 @@ export const PUT = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
             }
 
             const updateData = {
-                fullName: data.fullName,
-                mobile: data.mobile,
+                fullName: fullName,
+                mobile: mobile,
                 isActive: data.isActive !== undefined ? data.isActive : true,
                 updatedAt: new Date(),
                 updatedBy: session?.user?.email || 'system'
@@ -234,6 +139,7 @@ export const PUT = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
                 data: {
                     id: updatedOwner._id.toString(),
                     fullName: updatedOwner.fullName,
+                    ownerName: updatedOwner.fullName, // Include ownerName for frontend compatibility
                     mobile: updatedOwner.mobile,
                     isActive: updatedOwner.isActive,
                     updatedAt: updatedOwner.updatedAt
@@ -257,7 +163,7 @@ export const DELETE = checkPermission(PERMISSIONS.vehicleOwners.DELETE)(
         console.log('🚗 DELETE /api/vehicle-owners/[id]')
         let client
         try {
-            const { id } = params
+            const { id } = await params
             const session = await getServerSession(authOptions)
 
             if (!id) {
@@ -317,7 +223,7 @@ export const PATCH = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
         console.log('🚗 PATCH /api/vehicle-owners/[id]')
         let client
         try {
-            const { id } = params
+            const { id } = await params
             const session = await getServerSession(authOptions)
             const data = await request.json()
 
@@ -365,60 +271,6 @@ export const PATCH = checkPermission(PERMISSIONS.vehicleOwners.UPDATE)(
             console.error('❌ Error:', error)
             return NextResponse.json(
                 { error: 'Failed to update owner status' },
-                { status: 500 }
-            )
-        } finally {
-            if (client) await client.close()
-        }
-    }
-)
-
-// ✅ Bulk DELETE owners
-export const BULK_DELETE = checkPermission(PERMISSIONS.vehicleOwners.DELETE)(
-    async function BULK_DELETE(request) {
-        console.log('🚗 BULK DELETE /api/vehicle-owners/bulk')
-        let client
-        try {
-            const session = await getServerSession(authOptions)
-            const { ids } = await request.json()
-
-            if (!ids || !Array.isArray(ids) || ids.length === 0) {
-                return NextResponse.json(
-                    { error: 'Owner IDs array is required' },
-                    { status: 400 }
-                )
-            }
-
-            client = new MongoClient(process.env.DATABASE_URL)
-            await client.connect()
-            const db = client.db()
-
-            // Check if any owners have vehicles
-            const vehiclesWithOwners = await db.collection('vehicles').find({
-                ownerId: { $in: ids }
-            }).toArray()
-
-            if (vehiclesWithOwners.length > 0) {
-                return NextResponse.json(
-                    { error: 'Cannot delete owners with associated vehicles' },
-                    { status: 409 }
-                )
-            }
-
-            const objectIds = ids.map(id => new ObjectId(id))
-            const result = await db.collection('vehicleOwners').deleteMany({
-                _id: { $in: objectIds }
-            })
-
-            return NextResponse.json({
-                success: true,
-                message: `${result.deletedCount} owners deleted successfully`,
-                deletedCount: result.deletedCount
-            })
-        } catch (error) {
-            console.error('❌ Error:', error)
-            return NextResponse.json(
-                { error: 'Failed to delete owners' },
                 { status: 500 }
             )
         } finally {

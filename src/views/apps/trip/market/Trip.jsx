@@ -1848,7 +1848,7 @@ const TripInfo = () => {
                                 </>
                             )}
                             {/* Add Advance Payment Button */}
-                            {/* <Tooltip title={canChangeStatus ? "Edit Trip" : "View Trip (Read-only)"}>
+                            <Tooltip title={canChangeStatus ? "Edit Trip" : "View Trip (Read-only)"}>
                                 <span>
                                     <IconButton
                                         onClick={() => openEditDialog(trip)}
@@ -1867,7 +1867,7 @@ const TripInfo = () => {
                                         <i className={`ri-delete-bin-line ${canChangeStatus ? 'text-error' : 'text-gray-400'}`} />
                                     </IconButton>
                                 </span>
-                            </Tooltip> */}
+                            </Tooltip>
                             {!canChangeStatus && (
                                 <Tooltip title={`Trip is ${trip.tripStatus}. No further actions allowed.`}>
                                     <Chip
@@ -2280,6 +2280,9 @@ const TripInfo = () => {
                                 value={form.tripDate}
                                 onChange={e => handleFormChange('tripDate', e.target.value)}
                                 InputLabelProps={{ shrink: true }}
+                                InputProps={{
+                                    readOnly: true,
+                                }}
                                 disabled={formLoading}
                                 size="small"
                             />

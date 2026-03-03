@@ -53,10 +53,10 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 // Vars
 const userRoleObj = {
   admin: { icon: 'ri-vip-crown-line', color: 'error' },
-  author: { icon: 'ri-computer-line', color: 'warning' },
-  editor: { icon: 'ri-edit-box-line', color: 'info' },
-  maintainer: { icon: 'ri-pie-chart-2-line', color: 'success' },
-  subscriber: { icon: 'ri-user-3-line', color: 'primary' }
+  account1: { icon: 'ri-computer-line', color: 'warning' },
+  account2: { icon: 'ri-edit-box-line', color: 'info' },
+  other: { icon: 'ri-pie-chart-2-line', color: 'success' },
+  driver: { icon: 'ri-user-3-line', color: 'primary' }
 }
 
 const userStatusObj = {

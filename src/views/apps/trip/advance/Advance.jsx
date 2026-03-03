@@ -160,33 +160,26 @@ const AdvanceRegister = () => {
     /* ================= CHECK IF ADVANCE EXISTS ON DATE ================= */
     const checkAdvanceExistsOnDate = (date, advanceType) => {
         if (!trip.advances || trip.advances.length === 0) return false
-
         console.log('Checking advances:', {
             date: date,
             advanceType: advanceType,
             allAdvances: trip.advances
         })
-
         // Check if there's already an advance (paid or unpaid) on this date
         const existingAdvance = trip.advances.find(adv => {
             // Compare dates as strings to avoid any format issues
             const advDate = adv.date || ''
             const compareDate = date || ''
-
             // Compare advance type (case insensitive)
             const advType = (adv.advanceType || '').toLowerCase().trim()
             const searchType = (advanceType || '').toLowerCase().trim()
-
             const dateMatch = advDate === compareDate
             const typeMatch = advType === searchType
-
             if (dateMatch && typeMatch) {
                 console.log('Found matching advance:', adv)
             }
-
             return dateMatch && typeMatch
         })
-
         return !!existingAdvance
     }
     /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
@@ -377,35 +370,28 @@ const AdvanceRegister = () => {
             // Fetch trip details
             const tripResponse = await fetch(`${TRIPS_API}?id=${tripId}`)
             const tripResult = await tripResponse.json()
-
             if (!tripResult.success || !tripResult.data) {
                 showSnackbar('Trip not found', 'error')
                 return null
             }
-
             // Fetch advances for this trip
             const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${tripId}`)
             const advancesResult = await advancesResponse.json()
-
             // Ensure all advances have properly formatted dates
             const advances = advancesResult.success ? (advancesResult.data || []).map(adv => ({
                 ...adv,
                 date: adv.date || adv.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
             })) : []
-
             // Calculate totals
             const totalPaid = advances
                 .filter(a => a.status === 'paid')
                 .reduce((s, a) => s + Number(a.amount || 0), 0)
-
             const totalProposed = advances
                 .filter(a => a.status === 'unpaid')
                 .reduce((s, a) => s + Number(a.amount || 0), 0)
-
             const totalAdvance = Array.isArray(tripResult.data) ? tripResult.data[0].totalAdvanceAmount : tripResult.data.totalAdvanceAmount
             const balance = totalAdvance - totalPaid
             const availableBalance = balance - totalProposed
-
             return {
                 trip: Array.isArray(tripResult.data)
                     ? tripResult.data[0]
@@ -556,14 +542,12 @@ const AdvanceRegister = () => {
             showSnackbar('Please fill all required fields', 'warning')
             return
         }
-
         // NEW: Check if advance already exists on this date
         console.log('Checking for duplicate:', {
             date: advanceForm.date,
             type: advanceForm.advanceType,
             existingAdvances: trip.advances
         })
-
         if (checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)) {
             showSnackbar(
                 `Cannot propose another "${advanceForm.advanceType}" on ${new Date(advanceForm.date).toLocaleDateString()}. ` +
@@ -572,30 +556,24 @@ const AdvanceRegister = () => {
             )
             return
         }
-
         // Check if trip is active
         if (trip.tripStatus && trip.tripStatus !== 'active' && trip.tripStatus !== 'Active') {
             showSnackbar(`Cannot add advance to trip with status: ${trip.tripStatus}`, 'error')
             return
         }
-
         const amount = Number(advanceForm.amount)
-
         // Check if proposed amount exceeds available balance
         if (amount > availableBalance) {
             showSnackbar(`Cannot exceed available balance (${availableBalance.toFixed(2)})`, 'error')
             return
         }
-
         // Check if amount is positive
         if (amount <= 0) {
             showSnackbar('Amount must be greater than 0', 'error')
             return
         }
-
         try {
             setFormLoading(true)
-
             console.log('Sending advance data:', {
                 tripId: trip._id,
                 vehicleNo: trip.vehicleNo,
@@ -604,7 +582,6 @@ const AdvanceRegister = () => {
                 remark: advanceForm.remark,
                 date: advanceForm.date
             })
-
             const response = await fetch(ADVANCES_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -618,10 +595,8 @@ const AdvanceRegister = () => {
                     status: 'unpaid'  // Default status is unpaid
                 })
             })
-
             const result = await response.json()
             console.log('API response:', result)
-
             if (result.success) {
                 // Refresh advances for this trip
                 const data = await fetchTripWithAdvances(trip._id)
@@ -635,7 +610,6 @@ const AdvanceRegister = () => {
                         availableBalance: data.availableBalance
                     }))
                 }
-
                 // Reset advance form with cleared advance type
                 setAdvanceForm({
                     advanceType: '',
@@ -643,7 +617,6 @@ const AdvanceRegister = () => {
                     remark: '',
                     date: new Date().toISOString().split('T')[0]
                 })
-
                 showSnackbar('Advance proposed successfully', 'success')
                 // Refresh the main table data
                 await fetchTrips()
@@ -1253,9 +1226,18 @@ const AdvanceRegister = () => {
     }
     /* ================= CLOSE MODALS ================= */
     const handleCloseModal = async () => {
-        setOpen(false)
-        await fetchTrips()
-    }
+        setAdvanceForm(prev => ({
+            ...prev,
+            advanceType: '',
+            amount: '',
+            remark: ''
+            // ❌ do NOT touch date
+        }));
+
+        setOpen(false);
+        fetchTrips();
+    };
+
     const handleCloseProceedModal = async () => {
         setProceedOpen(false)
         await fetchTrips()
@@ -1668,10 +1650,10 @@ const AdvanceRegister = () => {
                             /* SELECT TRIP FOR ADDING ADVANCE */
                             <div className="flex flex-col gap-4">
                                 <Typography variant="h6" className="mb-3">Select a Trip</Typography>
-                                <Alert severity="info" sx={{ mb: 2 }}>
+                                {/* <Alert severity="info" sx={{ mb: 2 }}>
                                     <strong>Important:</strong> A vehicle can only have ONE active trip at a time.
                                     Previous trips must be closed/completed/cancelled before starting a new one.
-                                </Alert>
+                                </Alert> */}
                                 <Autocomplete
                                     options={rows.filter(row =>
                                         row.vehicleNo &&
@@ -1984,102 +1966,10 @@ const AdvanceRegister = () => {
                                 </Grid>
                                 <Divider className="my-4" />
                                 {/* ADVANCE ENTRY SECTION - Only show if trip is active AND has available balance */}
-                                {/* {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
-                                    availableBalance > 0 ? (
-                                        <>
-                                            <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
-                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-                                                <TextField
-                                                    select
-                                                    label="Advance Type"
-                                                    value={advanceForm.advanceType}
-                                                    onChange={e =>
-                                                        setAdvanceForm({ ...advanceForm, advanceType: e.target.value })
-                                                    }
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                >
-                                                    <MenuItem value="">Select Type</MenuItem>
-                                                    {getAvailableAdvanceTypes().map(t => (
-                                                        <MenuItem key={t} value={t}>{t}</MenuItem>
-                                                    ))}
-                                                    {getAvailableAdvanceTypes().length === 0 && (
-                                                        <MenuItem value="" disabled>All advance types already used</MenuItem>
-                                                    )}
-                                                </TextField>
-                                                <TextField
-                                                    label="Amount"
-                                                    type="number"
-                                                    value={advanceForm.amount}
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                    onChange={e => {
-                                                        const value = e.target.value
-                                                        // Validate amount doesn't exceed available balance
-                                                        const numValue = parseFloat(value) || 0
-                                                        if (numValue > availableBalance) {
-                                                            showSnackbar(`Amount cannot exceed available balance (${availableBalance.toFixed(2)})`, 'warning')
-                                                        }
-                                                        setAdvanceForm(prev => ({
-                                                            ...prev,
-                                                            amount: value
-                                                        }))
-                                                    }}
-                                                    inputProps={{ min: 0, max: availableBalance, step: 0.01 }}
-                                                    helperText={`Max: ${availableBalance.toFixed(2)}`}
-                                                    error={parseFloat(advanceForm.amount || 0) > availableBalance}
-                                                />
-                                                <DatePicker
-                                                    label="Date"
-                                                    value={new Date(advanceForm.date)}
-                                                    onChange={(newDate) => {
-                                                        const formattedDate = newDate.toISOString().split('T')[0]
-                                                        setAdvanceForm(prev => ({
-                                                            ...prev,
-                                                            date: formattedDate
-                                                        }))
-                                                    }}
-                                                    slotProps={{ textField: { fullWidth: true } }}
-                                                    format="dd/MM/yyyy"
-                                                />
-                                                <TextField
-                                                    label="Remark"
-                                                    value={advanceForm.remark}
-                                                    onChange={e =>
-                                                        setAdvanceForm({ ...advanceForm, remark: e.target.value })
-                                                    }
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                />
-                                                <Button
-                                                    variant="contained"
-                                                    onClick={addAdvance}
-                                                    fullWidth
-                                                    disabled={formLoading || !advanceForm.advanceType || !advanceForm.amount ||
-                                                        getAvailableAdvanceTypes().length === 0 ||
-                                                        parseFloat(advanceForm.amount || 0) > availableBalance ||
-                                                        parseFloat(advanceForm.amount || 0) <= 0}
-                                                    startIcon={formLoading && <CircularProgress size={16} />}
-                                                >
-                                                    Add Advance
-                                                </Button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <Alert severity="warning" sx={{ mb: 3 }}>
-                                            No available balance for new advances. Available: {availableBalance.toFixed(2)}
-                                        </Alert>
-                                    )
-                                ) : (
-                                    <Alert severity="warning" sx={{ mb: 3 }}>
-                                        This trip is {trip.tripStatus}. Cannot add new advances. You can only view existing advances.
-                                    </Alert>
-                                )} */}
                                 {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
                                     availableBalance > 0 ? (
                                         <>
                                             <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
-
                                             {/* Show warning if trying to add on same date */}
                                             {advanceForm.advanceType && advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType) && (
                                                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -2087,116 +1977,146 @@ const AdvanceRegister = () => {
                                                     You cannot propose another advance of the same type on the same date. Please select a different date.
                                                 </Alert>
                                             )}
-
-                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
-                                                <TextField
-                                                    select
-                                                    label="Advance Type"
-                                                    value={advanceForm.advanceType}
-                                                    onChange={e =>
-                                                        setAdvanceForm({ ...advanceForm, advanceType: e.target.value })
-                                                    }
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                >
-                                                    <MenuItem value="">Select Type</MenuItem>
-                                                    {getAvailableAdvanceTypes().map(t => (
-                                                        <MenuItem key={t} value={t}>{t}</MenuItem>
-                                                    ))}
-                                                    {getAvailableAdvanceTypes().length === 0 && (
-                                                        <MenuItem value="" disabled>All advance types already used</MenuItem>
-                                                    )}
-                                                </TextField>
-
-                                                <TextField
-                                                    label="Amount"
-                                                    type="number"
-                                                    value={advanceForm.amount}
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                    onChange={e => {
-                                                        const value = e.target.value
-                                                        // Validate amount doesn't exceed available balance
-                                                        const numValue = parseFloat(value) || 0
-                                                        if (numValue > availableBalance) {
-                                                            showSnackbar(`Amount cannot exceed available balance (${availableBalance.toFixed(2)})`, 'warning')
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                                {/* Advance Type - 3 columns */}
+                                                <div className="md:col-span-3">
+                                                    <TextField
+                                                        select
+                                                        label="Advance Type"
+                                                        value={advanceForm.advanceType}
+                                                        onChange={e =>
+                                                            setAdvanceForm({ ...advanceForm, advanceType: e.target.value })
                                                         }
-                                                        setAdvanceForm(prev => ({
-                                                            ...prev,
-                                                            amount: value
-                                                        }))
-                                                    }}
-                                                    inputProps={{ min: 0, max: availableBalance, step: 0.01 }}
-                                                    helperText={`Max: ${availableBalance.toFixed(2)}`}
-                                                    error={parseFloat(advanceForm.amount || 0) > availableBalance}
-                                                />
+                                                        fullWidth
+                                                        disabled={formLoading}
+                                                    >
+                                                        <MenuItem value="">Select Type</MenuItem>
+                                                        {getAvailableAdvanceTypes().map(t => (
+                                                            <MenuItem key={t} value={t}>{t}</MenuItem>
+                                                        ))}
+                                                        {getAvailableAdvanceTypes().length === 0 && (
+                                                            <MenuItem value="" disabled>All advance types already used</MenuItem>
+                                                        )}
+                                                    </TextField>
+                                                </div>
 
-                                                <DatePicker
-                                                    label="Date"
-                                                    value={new Date(advanceForm.date)}
-                                                    onChange={(newDate) => {
-                                                        const formattedDate = newDate.toISOString().split('T')[0]
-                                                        setAdvanceForm(prev => ({
-                                                            ...prev,
-                                                            date: formattedDate
-                                                        }))
-                                                    }}
-                                                    slotProps={{
-                                                        textField: {
-                                                            fullWidth: true,
-                                                            error: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType),
-                                                            helperText: advanceForm.advanceType && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)
-                                                                ? 'Already proposed on this date'
-                                                                : ''
+                                                {/* Amount - 2 columns */}
+                                                <div className="md:col-span-2">
+                                                    <TextField
+                                                        label="Amount"
+                                                        type="text"
+                                                        inputMode="decimal"
+
+                                                        value={advanceForm.amount}
+                                                        fullWidth
+                                                        disabled={formLoading}
+                                                        onChange={e => {
+                                                            const value = e.target.value
+                                                            const numValue = parseFloat(value) || 0
+                                                            if (numValue > availableBalance) {
+                                                                showSnackbar(`Amount cannot exceed available balance (${availableBalance.toFixed(2)})`, 'warning')
+                                                            }
+                                                            setAdvanceForm(prev => ({
+                                                                ...prev,
+                                                                amount: value
+                                                            }))
+                                                        }}
+                                                        inputProps={{ min: 0, max: availableBalance, step: 0.01 }}
+                                                        helperText={`Max: ${availableBalance.toFixed(2)}`}
+                                                        error={parseFloat(advanceForm.amount || 0) > availableBalance}
+                                                    />
+                                                </div>
+
+                                                {/* Date - 2 columns */}
+                                                <div className="md:col-span-2">
+                                                    <DatePicker
+                                                        label="Date"
+                                                        value={advanceForm.date ? new Date(advanceForm.date) : null}
+                                                        disabled
+                                                        onChange={(newDate) => {
+                                                            if (!newDate) return;
+                                                            const formattedDate = newDate.toISOString().split("T")[0];
+                                                            setAdvanceForm((prev) => ({
+                                                                ...prev,
+                                                                date: formattedDate,
+                                                            }));
+                                                        }}
+                                                        slotProps={{
+                                                            textField: {
+                                                                fullWidth: true,
+                                                                inputProps: { readOnly: true },
+                                                                error:
+                                                                    advanceForm.advanceType &&
+                                                                    checkAdvanceExistsOnDate(
+                                                                        advanceForm.date,
+                                                                        advanceForm.advanceType
+                                                                    ),
+                                                                helperText:
+                                                                    advanceForm.advanceType &&
+                                                                        checkAdvanceExistsOnDate(
+                                                                            advanceForm.date,
+                                                                            advanceForm.advanceType
+                                                                        )
+                                                                        ? "Already proposed on this date"
+                                                                        : "",
+                                                            },
+                                                        }}
+                                                        format="dd/MM/yyyy"
+                                                        shouldDisableDate={(date) => {
+                                                            const dateStr = date.toISOString().split("T")[0];
+                                                            const advancesOnDate =
+                                                                trip.advances?.filter((adv) => adv.date === dateStr) || [];
+                                                            const usedTypesOnDate = advancesOnDate.map(
+                                                                (adv) => adv.advanceType
+                                                            );
+                                                            const availableTypes = getAvailableAdvanceTypes();
+                                                            return (
+                                                                availableTypes.length > 0 &&
+                                                                availableTypes.every((type) =>
+                                                                    usedTypesOnDate.includes(type)
+                                                                )
+                                                            );
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                {/* Remark - 3 columns */}
+                                                <div className="md:col-span-3">
+                                                    <TextField
+                                                        label="Remark"
+                                                        value={advanceForm.remark}
+                                                        onChange={e =>
+                                                            setAdvanceForm({ ...advanceForm, remark: e.target.value })
                                                         }
-                                                    }}
-                                                    format="dd/MM/yyyy"
-                                                    shouldDisableDate={(date) => {
-                                                        // Optionally disable dates that already have all advance types used
-                                                        const dateStr = date.toISOString().split('T')[0]
-                                                        const advancesOnDate = trip.advances?.filter(adv => adv.date === dateStr) || []
-                                                        const usedTypesOnDate = advancesOnDate.map(adv => adv.advanceType)
-                                                        const availableTypes = getAvailableAdvanceTypes()
+                                                        fullWidth
+                                                        disabled={formLoading}
+                                                    />
+                                                </div>
 
-                                                        // Disable date if all advance types are already used on this date
-                                                        return availableTypes.length > 0 &&
-                                                            availableTypes.every(type => usedTypesOnDate.includes(type))
-                                                    }}
-                                                />
-
-                                                <TextField
-                                                    label="Remark"
-                                                    value={advanceForm.remark}
-                                                    onChange={e =>
-                                                        setAdvanceForm({ ...advanceForm, remark: e.target.value })
-                                                    }
-                                                    fullWidth
-                                                    disabled={formLoading}
-                                                />
-
-                                                <Button
-                                                    variant="contained"
-                                                    onClick={addAdvance}
-                                                    fullWidth
-                                                    disabled={
-                                                        formLoading ||
-                                                        !advanceForm.advanceType ||
-                                                        !advanceForm.amount ||
-                                                        getAvailableAdvanceTypes().length === 0 ||
-                                                        parseFloat(advanceForm.amount || 0) > availableBalance ||
-                                                        parseFloat(advanceForm.amount || 0) <= 0 ||
-                                                        // NEW: Disable if advance already exists on this date
-                                                        (advanceForm.advanceType && advanceForm.date &&
-                                                            checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType))
-                                                    }
-                                                    startIcon={formLoading && <CircularProgress size={16} />}
-                                                >
-                                                    Add Advance
-                                                </Button>
+                                                {/* Button - 2 columns */}
+                                                <div className="md:col-span-2">
+                                                    <Button
+                                                        variant="contained"
+                                                        onClick={addAdvance}
+                                                        fullWidth
+                                                        disabled={
+                                                            formLoading ||
+                                                            !advanceForm.advanceType ||
+                                                            !advanceForm.amount ||
+                                                            getAvailableAdvanceTypes().length === 0 ||
+                                                            parseFloat(advanceForm.amount || 0) > availableBalance ||
+                                                            parseFloat(advanceForm.amount || 0) <= 0 ||
+                                                            (advanceForm.advanceType && advanceForm.date &&
+                                                                checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType))
+                                                        }
+                                                        startIcon={formLoading && <CircularProgress size={16} />}
+                                                    >
+                                                        Add Advance
+                                                    </Button>
+                                                </div>
                                             </div>
-
                                             {/* Show existing advances for the selected date */}
-                                            {advanceForm.date && trip.advances?.filter(adv => adv.date === advanceForm.date).length > 0 && (
+                                            {/* {advanceForm.date && trip.advances?.filter(adv => adv.date === advanceForm.date).length > 0 && (
                                                 <Box sx={{ mt: 2 }}>
                                                     <Typography variant="subtitle2" color="text.secondary">
                                                         Existing advances on {new Date(advanceForm.date).toLocaleDateString()}:
@@ -2229,7 +2149,7 @@ const AdvanceRegister = () => {
                                                         </TableBody>
                                                     </Table>
                                                 </Box>
-                                            )}
+                                            )} */}
                                         </>
                                     ) : (
                                         <Alert severity="warning" sx={{ mb: 3 }}>
