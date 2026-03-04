@@ -1,38 +1,7 @@
 'use client'
 import { useState, useMemo, useRef, useEffect } from 'react'
-import {
-    Card,
-    CardContent,
-    Typography,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    TextField,
-    MenuItem,
-    Divider,
-    IconButton,
-    Table,
-    TableHead,
-    TableRow,
-    TableCell,
-    TableBody,
-    CircularProgress,
-    Alert,
-    Snackbar,
-    Autocomplete,
-    Grid,
-    Box,
-    Tabs,
-    Tab,
-    Paper
-} from '@mui/material'
-import {
-    createColumnHelper,
-    getCoreRowModel,
-    useReactTable,
-    flexRender
-} from '@tanstack/react-table'
+import { Card, CardContent, Typography, Button, Dialog, DialogTitle, DialogContent, TextField, MenuItem, Divider, IconButton, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress, Alert, Snackbar, Autocomplete, Grid, Box, Tabs, Tab, Paper } from '@mui/material';
+import { createColumnHelper, getCoreRowModel, useReactTable, flexRender } from '@tanstack/react-table'
 import tableStyles from '@core/styles/table.module.css'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
@@ -40,14 +9,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 /* ================= CONSTANTS ================= */
-const advanceTypes = [
-    '1st Advance',
-    '2nd Advance',
-    '3rd Advance',
-    '4th Advance',
-    'Diesel 1',
-    'Diesel 2'
-]
+const advanceTypes = ['1st Advance', '2nd Advance', '3rd Advance', '4th Advance', 'Diesel 1', 'Diesel 2']
 const columnHelper = createColumnHelper()
 /* ================================================= */
 const AdvanceRegister = () => {
@@ -122,8 +84,8 @@ const AdvanceRegister = () => {
                     return { hasOverlapping: false, message: '', activeTrips: [] }
                 }
                 // Sort active trips by date (ascending)
-                const sortedActiveTrips = activeTrips.sort((a, b) =>
-                    new Date(a.tripDate || a.createdAt) - new Date(b.tripDate || b.createdAt)
+                const sortedActiveTrips = activeTrips.sort(
+                    (a, b) => new Date(a.tripDate || a.createdAt) - new Date(b.tripDate || b.createdAt)
                 )
                 // The earliest active trip is the one that should be manageable
                 const earliestActiveTrip = sortedActiveTrips[0]
@@ -158,28 +120,60 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= CHECK IF ADVANCE EXISTS ON DATE ================= */
-    const checkAdvanceExistsOnDate = (date, advanceType) => {
+    // const checkAdvanceExistsOnDate = (date, advanceType) => {
+    //     if (!trip.advances || trip.advances.length === 0) return false
+    //     console.log('Checking advances:', {
+    //         date: date,
+    //         advanceType: advanceType,
+    //         allAdvances: trip.advances
+    //     })
+    //     // Check if there's already an advance (paid or unpaid) on this date
+    //     const existingAdvance = trip.advances.find(adv => {
+    //         // Compare dates as strings to avoid any format issues
+    //         const advDate = adv.date || ''
+    //         const compareDate = date || ''
+    //         // Compare advance type (case insensitive)
+    //         const advType = (adv.advanceType || '').toLowerCase().trim()
+    //         const searchType = (advanceType || '').toLowerCase().trim()
+    //         const dateMatch = advDate === compareDate
+    //         const typeMatch = advType === searchType
+    //         if (dateMatch && typeMatch) {
+    //             console.log('Found matching advance:', adv)
+    //         }
+    //         return dateMatch && typeMatch
+    //     })
+    //     return !!existingAdvance
+    // }
+    const checkAdvanceExistsOnDate = (date) => {
         if (!trip.advances || trip.advances.length === 0) return false
-        console.log('Checking advances:', {
-            date: date,
-            advanceType: advanceType,
-            allAdvances: trip.advances
+
+        console.log('Checking if any advance exists on date:', {
+            searchDate: date,
+            existingAdvances: trip.advances.map(a => ({
+                date: a.date,
+                type: a.advanceType,
+                status: a.status
+            }))
         })
-        // Check if there's already an advance (paid or unpaid) on this date
+
+        // Check if ANY advance (UNPAID) exists on this date
         const existingAdvance = trip.advances.find(adv => {
-            // Compare dates as strings to avoid any format issues
             const advDate = adv.date || ''
             const compareDate = date || ''
-            // Compare advance type (case insensitive)
-            const advType = (adv.advanceType || '').toLowerCase().trim()
-            const searchType = (advanceType || '').toLowerCase().trim()
+
+            // Sirf date match check karo, advanceType mat check karo
             const dateMatch = advDate === compareDate
-            const typeMatch = advType === searchType
-            if (dateMatch && typeMatch) {
-                console.log('Found matching advance:', adv)
+
+            // Sirf UNPAID advances check karo
+            const isUnpaid = adv.status === 'unpaid'
+
+            if (dateMatch && isUnpaid) {
+                console.log('Found existing UNPAID advance on this date:', adv)
+                return true
             }
-            return dateMatch && typeMatch
+            return false
         })
+
         return !!existingAdvance
     }
     /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
@@ -190,9 +184,7 @@ const AdvanceRegister = () => {
             if (result.success) {
                 const activeTrips = result.data || []
                 // Filter out the current trip if we're editing
-                const otherActiveTrips = activeTrips.filter(trip =>
-                    trip._id !== currentTripId && trip.id !== currentTripId
-                )
+                const otherActiveTrips = activeTrips.filter(trip => trip._id !== currentTripId && trip.id !== currentTripId)
                 return {
                     hasActiveTrips: otherActiveTrips.length > 0,
                     activeTrips: otherActiveTrips
@@ -247,9 +239,7 @@ const AdvanceRegister = () => {
                 Object.keys(tripsByVehicle).forEach(vehicleNo => {
                     const vehicleTrips = tripsByVehicle[vehicleNo]
                     // Sort trips by date
-                    const sortedTrips = vehicleTrips.sort((a, b) =>
-                        new Date(a.tripDate) - new Date(b.tripDate)
-                    )
+                    const sortedTrips = vehicleTrips.sort((a, b) => new Date(a.tripDate) - new Date(b.tripDate))
                     // mark all but the earliest as "blocked"
                     if (sortedTrips.length > 1) {
                         // The earliest active trip is the valid one
@@ -275,15 +265,13 @@ const AdvanceRegister = () => {
                 })
                 // Fetch advances for each active trip
                 const tripsWithAdvances = await Promise.all(
-                    processedTrips.map(async (trip) => {
+                    processedTrips.map(async trip => {
                         try {
                             const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
                             const advancesResult = await advancesResponse.json()
                             // Calculate total paid and available balance
                             const advances = advancesResult.success ? advancesResult.data : []
-                            const totalPaid = advances
-                                .filter(a => a.status === 'paid')
-                                .reduce((s, a) => s + Number(a.amount || 0), 0)
+                            const totalPaid = advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
                             const totalProposed = advances
                                 .filter(a => a.status === 'unpaid')
                                 .reduce((s, a) => s + Number(a.amount || 0), 0)
@@ -356,7 +344,7 @@ const AdvanceRegister = () => {
                 setTodayAdvances([])
             }
         } catch (error) {
-            console.error('Error fetching today\'s advances:', error)
+            console.error("Error fetching today's advances:", error)
             showSnackbar(`Error fetching advances: ${error.message}`, 'error')
             setTodayAdvances([])
         } finally {
@@ -364,7 +352,7 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= FETCH TRIP WITH ADVANCES ================= */
-    const fetchTripWithAdvances = async (tripId) => {
+    const fetchTripWithAdvances = async tripId => {
         try {
             setFormLoading(true)
             // Fetch trip details
@@ -378,24 +366,22 @@ const AdvanceRegister = () => {
             const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${tripId}`)
             const advancesResult = await advancesResponse.json()
             // Ensure all advances have properly formatted dates
-            const advances = advancesResult.success ? (advancesResult.data || []).map(adv => ({
-                ...adv,
-                date: adv.date || adv.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
-            })) : []
+            const advances = advancesResult.success
+                ? (advancesResult.data || []).map(adv => ({
+                    ...adv,
+                    date: adv.date || adv.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+                }))
+                : []
             // Calculate totals
-            const totalPaid = advances
-                .filter(a => a.status === 'paid')
-                .reduce((s, a) => s + Number(a.amount || 0), 0)
-            const totalProposed = advances
-                .filter(a => a.status === 'unpaid')
-                .reduce((s, a) => s + Number(a.amount || 0), 0)
-            const totalAdvance = Array.isArray(tripResult.data) ? tripResult.data[0].totalAdvanceAmount : tripResult.data.totalAdvanceAmount
+            const totalPaid = advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
+            const totalProposed = advances.filter(a => a.status === 'unpaid').reduce((s, a) => s + Number(a.amount || 0), 0)
+            const totalAdvance = Array.isArray(tripResult.data)
+                ? tripResult.data[0].totalAdvanceAmount
+                : tripResult.data.totalAdvanceAmount
             const balance = totalAdvance - totalPaid
             const availableBalance = balance - totalProposed
             return {
-                trip: Array.isArray(tripResult.data)
-                    ? tripResult.data[0]
-                    : tripResult.data,
+                trip: Array.isArray(tripResult.data) ? tripResult.data[0] : tripResult.data,
                 advances: advances,
                 totalPaid: totalPaid,
                 totalProposed: totalProposed,
@@ -423,9 +409,7 @@ const AdvanceRegister = () => {
     /* ================= CALCULATIONS ================= */
     const totalDiesel = Number(trip.dieselLtr || 0) * Number(trip.dieselRate || 0)
     // Calculate only PAID advances
-    const totalAdvancePaid = trip.advances
-        .filter(a => a.status === 'paid')
-        .reduce((s, a) => s + Number(a.amount || 0), 0)
+    const totalAdvancePaid = trip.advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
     // Calculate UNPAID/Proposed advances
     const totalProposedUnpaid = trip.advances
         .filter(a => a.status !== 'paid')
@@ -459,7 +443,7 @@ const AdvanceRegister = () => {
         })
         setOpen(true)
     }
-    const openEdit = async (row) => {
+    const openEdit = async row => {
         try {
             if (!row._id && !row.id) {
                 showSnackbar('Trip ID is required', 'error')
@@ -482,11 +466,7 @@ const AdvanceRegister = () => {
                 return
             }
             // CRITICAL CHECK: Check for OTHER active trips with date priority
-            const overlapCheck = await checkForOverlappingTrips(
-                tripData.vehicleNo,
-                tripId,
-                tripDate
-            )
+            const overlapCheck = await checkForOverlappingTrips(tripData.vehicleNo, tripId, tripDate)
             if (overlapCheck.hasOverlapping) {
                 // Show which earlier trip is blocking
                 const blockingTrip = overlapCheck.earliestTrip
@@ -501,7 +481,14 @@ const AdvanceRegister = () => {
             // If validation passes, fetch the trip with advances
             const data = await fetchTripWithAdvances(tripId)
             if (data) {
-                const { trip: tripDetail, advances, totalPaid, totalProposed, balance: tripBalance, availableBalance: availBalance } = data
+                const {
+                    trip: tripDetail,
+                    advances,
+                    totalPaid,
+                    totalProposed,
+                    balance: tripBalance,
+                    availableBalance: availBalance
+                } = data
                 setTrip({
                     id: tripDetail.id || null,
                     _id: tripDetail._id || tripId,
@@ -592,7 +579,7 @@ const AdvanceRegister = () => {
                     amount: amount,
                     remark: advanceForm.remark,
                     date: advanceForm.date, // Use selected date
-                    status: 'unpaid'  // Default status is unpaid
+                    status: 'unpaid' // Default status is unpaid
                 })
             })
             const result = await response.json()
@@ -632,7 +619,7 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= MARK ADVANCE AS PAID ================= */
-    const markAdvanceAsPaid = async (advanceId) => {
+    const markAdvanceAsPaid = async advanceId => {
         try {
             setProceedLoading(true)
             const response = await fetch(ADVANCES_API, {
@@ -664,7 +651,7 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= DELETE ADVANCE ================= */
-    const deleteAdvance = async (advanceId) => {
+    const deleteAdvance = async advanceId => {
         if (!advanceId) return
         if (!confirm('Are you sure you want to delete this advance?')) return
         try {
@@ -730,7 +717,9 @@ const AdvanceRegister = () => {
             // Subtitle
             doc.setFontSize(11)
             doc.setFont('helvetica', 'normal')
-            doc.text(`Generated on: ${currentDate} at ${currentTime}`, doc.internal.pageSize.width / 2, 32, { align: 'center' })
+            doc.text(`Generated on: ${currentDate} at ${currentTime}`, doc.internal.pageSize.width / 2, 32, {
+                align: 'center'
+            })
             // Prepare table data
             const tableData = rows.map((trip, index) => {
                 // Calculate amounts
@@ -749,9 +738,8 @@ const AdvanceRegister = () => {
                     }
                 }
                 // Get latest unpaid advance amount
-                const latestUnpaidAdvance = unpaidAdvances.length > 0
-                    ? Number(unpaidAdvances[unpaidAdvances.length - 1]?.amount || 0).toFixed(2)
-                    : '0.00'
+                const latestUnpaidAdvance =
+                    unpaidAdvances.length > 0 ? Number(unpaidAdvances[unpaidAdvances.length - 1]?.amount || 0).toFixed(2) : '0.00'
                 // Format account number for privacy
                 const formattedAccountNo = trip.accountNo
                     ? trip.accountNo.length > 8
@@ -759,11 +747,10 @@ const AdvanceRegister = () => {
                         : trip.accountNo
                     : 'N/A'
                 // Get latest remark
-                const latestRemark = unpaidAdvances.length > 0
-                    ? (unpaidAdvances[unpaidAdvances.length - 1]?.remark || 'N/A')
-                    : 'N/A'
+                const latestRemark =
+                    unpaidAdvances.length > 0 ? unpaidAdvances[unpaidAdvances.length - 1]?.remark || 'N/A' : 'N/A'
                 // Format amounts with thousand separators
-                const formatAmount = (amount) => {
+                const formatAmount = amount => {
                     return parseFloat(amount).toLocaleString('en-IN', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
@@ -789,21 +776,21 @@ const AdvanceRegister = () => {
             })
             // Define column widths - optimized for A3 landscape
             const columnWidths = [
-                15,  // 0: Sr. No.
-                25,  // 1: Trip Date
-                25,  // 2: LHS No.
-                28,  // 3: Vehicle No
-                25,  // 4: From
-                25,  // 5: To
-                28,  // 6: Total Advance
-                28,  // 7: Advance Paid
-                28,  // 9: Balance
-                25,  // 10: IFSC Code
-                35,  // 11: Account No
-                30,  // 12: Bank Name
-                30,  // 13: Account Holder
-                30,  // 8: Advance (Unpaid)
-                30   // 14: Remark
+                15, // 0: Sr. No.
+                25, // 1: Trip Date
+                25, // 2: LHS No.
+                28, // 3: Vehicle No
+                25, // 4: From
+                25, // 5: To
+                28, // 6: Total Advance
+                28, // 7: Advance Paid
+                28, // 9: Balance
+                25, // 10: IFSC Code
+                35, // 11: Account No
+                30, // 12: Bank Name
+                30, // 13: Account Holder
+                30, // 8: Advance (Unpaid)
+                30 // 14: Remark
             ]
             // AutoTable configuration
             autoTable(doc, {
@@ -932,67 +919,61 @@ const AdvanceRegister = () => {
                 tableWidth: 'auto',
                 didParseCell: function (data) {
                     // Skip header rows
-                    if (data.row.index < 0) return;
+                    if (data.row.index < 0) return
                     // Convert cell text to string for processing
-                    let cellText = '';
+                    let cellText = ''
                     if (Array.isArray(data.cell.text)) {
-                        cellText = data.cell.text.join(' ');
+                        cellText = data.cell.text.join(' ')
                     } else if (typeof data.cell.text === 'string') {
-                        cellText = data.cell.text;
+                        cellText = data.cell.text
                     } else if (data.cell.text != null) {
-                        cellText = String(data.cell.text);
+                        cellText = String(data.cell.text)
                     }
                     // Color code balance column
                     if (data.column.index === 9) {
                         // Remove commas and convert to number
-                        const balanceText = cellText.replace(/,/g, '');
-                        const balance = parseFloat(balanceText);
+                        const balanceText = cellText.replace(/,/g, '')
+                        const balance = parseFloat(balanceText)
                         if (!isNaN(balance)) {
                             if (balance < 0) {
-                                data.cell.styles.fillColor = [255, 230, 230]; // Light red
-                                data.cell.styles.textColor = [255, 0, 0];
+                                data.cell.styles.fillColor = [255, 230, 230] // Light red
+                                data.cell.styles.textColor = [255, 0, 0]
                             } else if (balance === 0) {
-                                data.cell.styles.fillColor = [230, 255, 230]; // Light green
-                                data.cell.styles.textColor = [0, 128, 0];
+                                data.cell.styles.fillColor = [230, 255, 230] // Light green
+                                data.cell.styles.textColor = [0, 128, 0]
                             }
                         }
                     }
                     // Highlight if unpaid advance exists
                     if (data.column.index === 8) {
                         // Remove commas and convert to number
-                        const unpaidText = cellText.replace(/,/g, '');
-                        const unpaid = parseFloat(unpaidText);
+                        const unpaidText = cellText.replace(/,/g, '')
+                        const unpaid = parseFloat(unpaidText)
                         if (!isNaN(unpaid) && unpaid > 0) {
-                            data.cell.styles.textColor = [220, 53, 69]; // Red for pending
+                            data.cell.styles.textColor = [220, 53, 69] // Red for pending
                         }
                     }
                 },
                 didDrawPage: function (data) {
                     // Footer
-                    const pageCount = doc.internal.getNumberOfPages();
-                    const pageHeight = doc.internal.pageSize.height;
+                    const pageCount = doc.internal.getNumberOfPages()
+                    const pageHeight = doc.internal.pageSize.height
                     // Footer separator
-                    doc.setDrawColor(180, 180, 180);
-                    doc.setLineWidth(0.3);
-                    doc.line(10, pageHeight - 20, doc.internal.pageSize.width - 10, pageHeight - 20);
+                    doc.setDrawColor(180, 180, 180)
+                    doc.setLineWidth(0.3)
+                    doc.line(10, pageHeight - 20, doc.internal.pageSize.width - 10, pageHeight - 20)
                     // Page number
-                    doc.setFontSize(9);
-                    doc.setTextColor(100);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(
-                        `Page ${data.pageNumber} of ${pageCount}`,
-                        doc.internal.pageSize.width / 2,
-                        pageHeight - 10,
-                        { align: 'center' }
-                    );
+                    doc.setFontSize(9)
+                    doc.setTextColor(100)
+                    doc.setFont('helvetica', 'normal')
+                    doc.text(`Page ${data.pageNumber} of ${pageCount}`, doc.internal.pageSize.width / 2, pageHeight - 10, {
+                        align: 'center'
+                    })
                     // Company footer
-                    doc.setFontSize(8);
-                    doc.text(
-                        '© Transport Management System',
-                        doc.internal.pageSize.width / 2,
-                        pageHeight - 5,
-                        { align: 'center' }
-                    );
+                    doc.setFontSize(8)
+                    doc.text('© Transport Management System', doc.internal.pageSize.width / 2, pageHeight - 5, {
+                        align: 'center'
+                    })
                 }
             })
             // Calculate totals
@@ -1026,7 +1007,7 @@ const AdvanceRegister = () => {
             doc.setLineWidth(0.2)
             doc.line(10, finalY + 18, 60, finalY + 18)
             // Format numbers for summary
-            const formatCurrency = (amount) => {
+            const formatCurrency = amount => {
                 return amount.toLocaleString('en-IN', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
@@ -1036,17 +1017,25 @@ const AdvanceRegister = () => {
             doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
             // Left column
-            doc.text([
-                `Total Trips: ${rows.length}`,
-                `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
-                `Total Paid: ${formatCurrency(totalPaidSum)}`
-            ], 10, finalY + 25)
+            doc.text(
+                [
+                    `Total Trips: ${rows.length}`,
+                    `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
+                    `Total Paid: ${formatCurrency(totalPaidSum)}`
+                ],
+                10,
+                finalY + 25
+            )
             // Right column
-            doc.text([
-                `Total Unpaid: ${formatCurrency(totalUnpaidSum)}`,
-                `Total Balance: ${formatCurrency(totalBalanceSum)}`,
-                `Report Date: ${currentDate}`
-            ], doc.internal.pageSize.width / 2, finalY + 25)
+            doc.text(
+                [
+                    `Total Unpaid: ${formatCurrency(totalUnpaidSum)}`,
+                    `Total Balance: ${formatCurrency(totalBalanceSum)}`,
+                    `Report Date: ${currentDate}`
+                ],
+                doc.internal.pageSize.width / 2,
+                finalY + 25
+            )
             // Add trip status summary
             const activeTrips = rows.filter(t => t.tripStatus === 'active' || t.tripStatus === 'Active').length
             const completedTrips = rows.filter(t => t.tripStatus === 'completed' || t.tripStatus === 'Completed').length
@@ -1073,13 +1062,12 @@ const AdvanceRegister = () => {
         setProceedOpen(true)
         fetchTodayAdvances()
     }
-    const buildTripPrintHTML = (trip) => {
+    const buildTripPrintHTML = trip => {
         const paidAdvances = trip.advances.filter(a => a.status === 'paid')
         const unpaidAdvances = trip.advances.filter(a => a.status !== 'paid')
         const totalPaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
         const totalUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-        const totalDiesel =
-            Number(trip.dieselLtr || 0) * Number(trip.dieselRate || 0)
+        const totalDiesel = Number(trip.dieselLtr || 0) * Number(trip.dieselRate || 0)
         const balance = Number(trip.totalAdvanceAmount || 0) - totalPaid
         return `
 <!DOCTYPE html>
@@ -1161,14 +1149,18 @@ const AdvanceRegister = () => {
     <tr>
       <th>Date</th><th>Type</th><th>Amount</th><th>Remark</th>
     </tr>
-    ${paidAdvances.map(a => `
+    ${paidAdvances
+                .map(
+                    a => `
       <tr>
         <td>${a.date}</td>
         <td>${a.advanceType}</td>
         <td>${a.amount}</td>
         <td>${a.remark || ''}</td>
       </tr>
-    `).join('')}
+    `
+                )
+                .join('')}
     <tr class="total-row">
       <td colspan="2">Total</td>
       <td colspan="2">${totalPaid.toFixed(2)}</td>
@@ -1180,16 +1172,23 @@ const AdvanceRegister = () => {
     <tr>
       <th>Date</th><th>Type</th><th>Amount</th><th>Remark</th>
     </tr>
-    ${unpaidAdvances.length === 0 ? `
+    ${unpaidAdvances.length === 0
+                ? `
       <tr><td colspan="4" style="text-align:center">No Unpaid Advances</td></tr>
-    ` : unpaidAdvances.map(a => `
+    `
+                : unpaidAdvances
+                    .map(
+                        a => `
       <tr>
         <td>${a.date}</td>
         <td>${a.advanceType}</td>
         <td>${a.amount}</td>
         <td>${a.remark || ''}</td>
       </tr>
-    `).join('')}
+    `
+                    )
+                    .join('')
+            }
     <tr class="total-row">
       <td colspan="2">Total</td>
       <td colspan="2">${totalUnpaid.toFixed(2)}</td>
@@ -1232,12 +1231,10 @@ const AdvanceRegister = () => {
             amount: '',
             remark: ''
             // ❌ do NOT touch date
-        }));
-
-        setOpen(false);
-        fetchTrips();
-    };
-
+        }))
+        setOpen(false)
+        fetchTrips()
+    }
     const handleCloseProceedModal = async () => {
         setProceedOpen(false)
         await fetchTrips()
@@ -1250,9 +1247,7 @@ const AdvanceRegister = () => {
             columnHelper.display({
                 header: 'Trip Date',
                 cell: ({ row }) => {
-                    const tripDate = row.original.tripDate
-                        ? new Date(row.original.tripDate).toLocaleDateString('en-IN')
-                        : 'N/A'
+                    const tripDate = row.original.tripDate ? new Date(row.original.tripDate).toLocaleDateString('en-IN') : 'N/A'
                     return tripDate
                 }
             }),
@@ -1280,7 +1275,7 @@ const AdvanceRegister = () => {
                     const balance = row.original.balance || 0
                     const color = balance === 0 ? 'success.main' : balance > 0 ? 'warning.main' : 'error.main'
                     return (
-                        <Typography color={color} fontWeight="bold">
+                        <Typography color={color} fontWeight='bold'>
                             {balance.toFixed(2)}
                         </Typography>
                     )
@@ -1292,7 +1287,7 @@ const AdvanceRegister = () => {
                     const available = row.original.availableBalance || 0
                     const color = available > 0 ? 'info.main' : 'text.disabled'
                     return (
-                        <Typography color={color} fontWeight="bold">
+                        <Typography color={color} fontWeight='bold'>
                             {available.toFixed(2)}
                         </Typography>
                     )
@@ -1311,13 +1306,11 @@ const AdvanceRegister = () => {
                         <Typography
                             color={color}
                             fontWeight={displayStatus.includes('BLOCKED') ? 'bold' : 'normal'}
-                            variant="body2"
+                            variant='body2'
                         >
                             {displayStatus}
                             {displayStatus.includes('BLOCKED') && (
-                                <span style={{ display: 'block', fontSize: '0.75rem', color: '#f44336' }}>
-                                    ⚠️ Close previous trip
-                                </span>
+                                <span style={{ display: 'block', fontSize: '0.75rem', color: '#f44336' }}>⚠️ Close previous trip</span>
                             )}
                         </Typography>
                     )
@@ -1331,17 +1324,17 @@ const AdvanceRegister = () => {
                     const status = trip.displayStatus || trip.tripStatus
                     return (
                         <Button
-                            size="small"
-                            variant="outlined"
+                            size='small'
+                            variant='outlined'
                             onClick={() => openEdit(trip)}
                             disabled={loading || !canManage}
                             color={canManage ? 'primary' : 'error'}
                             title={
-                                !canManage ?
-                                    status === 'BLOCKED - Close previous trip first' ?
-                                        'This vehicle has an older active trip. Please close that trip first.' :
-                                        `Trip status: ${status}. Cannot manage advances.` :
-                                    'View/Manage Advances'
+                                !canManage
+                                    ? status === 'BLOCKED - Close previous trip first'
+                                        ? 'This vehicle has an older active trip. Please close that trip first.'
+                                        : `Trip status: ${status}. Cannot manage advances.`
+                                    : 'View/Manage Advances'
                             }
                         >
                             {canManage ? 'View/Manage' : status.substring(0, 20)}
@@ -1384,7 +1377,8 @@ const AdvanceRegister = () => {
                 return
             }
             // Show confirmation with details
-            const confirmationMessage = `Proceed ${unpaidAdvances.length} unpaid advances for ${formattedDate} as paid?\n\n` +
+            const confirmationMessage =
+                `Proceed ${unpaidAdvances.length} unpaid advances for ${formattedDate} as paid?\n\n` +
                 `• Total advances: ${allAdvances.length}\n` +
                 `• Already paid: ${paidAdvances.length}\n` +
                 `• To be processed: ${unpaidAdvances.length}\n\n` +
@@ -1445,30 +1439,30 @@ const AdvanceRegister = () => {
                     <CardContent>
                         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                             <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-                                <Tab label="Advance Register" />
-                                <Tab label="Proceed Advances" />
+                                <Tab label='Advance Register' />
+                                <Tab label='Proceed Advances' />
                             </Tabs>
                         </Box>
                         {tabValue === 0 ? (
                             /* ================= MAIN ADVANCE TABLE ================= */
                             <>
-                                <div className="flex justify-between items-center mt-4">
-                                    <Typography variant="h5">Advance Register</Typography>
-                                    <div className="flex gap-2 items-center">
+                                <div className='flex justify-between items-center mt-4'>
+                                    <Typography variant='h5'>Advance Register</Typography>
+                                    <div className='flex gap-2 items-center'>
                                         {loading && <CircularProgress size={20} />}
                                         <Button
-                                            variant="contained"
+                                            variant='contained'
                                             onClick={openAdd}
                                             disabled={loading}
-                                            startIcon={<i className="ri-add-line" />}
+                                            startIcon={<i className='ri-add-line' />}
                                         >
                                             Add Advance
                                         </Button>
                                         <Button
-                                            variant="outlined"
+                                            variant='outlined'
                                             onClick={exportToPDF}
                                             disabled={loading || rows.length === 0}
-                                            startIcon={<i className="ri-file-download-line" />}
+                                            startIcon={<i className='ri-file-download-line' />}
                                             sx={{ ml: 1 }}
                                         >
                                             Export PDF
@@ -1478,25 +1472,23 @@ const AdvanceRegister = () => {
                                 </div>
                                 {/* Info Alert */}
                                 {loading ? (
-                                    <div className="flex justify-center p-8">
+                                    <div className='flex justify-center p-8'>
                                         <CircularProgress />
                                     </div>
                                 ) : rows.length === 0 ? (
-                                    <div className="p-8 text-center">
-                                        <Typography color="textSecondary">
+                                    <div className='p-8 text-center'>
+                                        <Typography color='textSecondary'>
                                             No active trips found. Please create active trips first.
                                         </Typography>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto mt-4">
+                                    <div className='overflow-x-auto mt-4'>
                                         <table className={tableStyles.table}>
                                             <thead>
                                                 {table.getHeaderGroups().map(hg => (
                                                     <tr key={hg.id}>
                                                         {hg.headers.map(h => (
-                                                            <th key={h.id}>
-                                                                {flexRender(h.column.columnDef.header, h.getContext())}
-                                                            </th>
+                                                            <th key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</th>
                                                         ))}
                                                     </tr>
                                                 ))}
@@ -1505,9 +1497,7 @@ const AdvanceRegister = () => {
                                                 {table.getRowModel().rows.map(row => (
                                                     <tr key={row.id}>
                                                         {row.getVisibleCells().map(cell => (
-                                                            <td key={cell.id}>
-                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                            </td>
+                                                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                                                         ))}
                                                     </tr>
                                                 ))}
@@ -1519,18 +1509,18 @@ const AdvanceRegister = () => {
                         ) : (
                             /* ================= PROCEED ADVANCES SECTION ================= */
                             <>
-                                <div className="flex justify-between items-center mt-4">
-                                    <Typography variant="h5">Proceed Advances</Typography>
-                                    <div className="flex gap-2 items-center">
-                                        <DatePicker
+                                <div className='flex justify-between items-center mt-4'>
+                                    <Typography variant='h5'>Proceed Advances</Typography>
+                                    <div className='flex gap-2 items-center'>
+                                        {/* <DatePicker
                                             label="Select Date"
                                             value={selectedDate}
                                             onChange={(newDate) => setSelectedDate(newDate)}
                                             slotProps={{ textField: { size: 'small' } }}
                                             format="dd/MM/yyyy"
-                                        />
+                                        /> */}
                                         <Button
-                                            variant="contained"
+                                            variant='contained'
                                             onClick={fetchTodayAdvances}
                                             disabled={proceedLoading || bulkProcessing}
                                             startIcon={proceedLoading && <CircularProgress size={16} />}
@@ -1538,19 +1528,21 @@ const AdvanceRegister = () => {
                                             Refresh
                                         </Button>
                                         <Button
-                                            variant="contained"
-                                            color="secondary"
+                                            variant='contained'
+                                            color='secondary'
                                             onClick={bulkProceedSelectedDateAdvances}
                                             disabled={proceedLoading || bulkProcessing || !selectedDate}
-                                            startIcon={bulkProcessing ? <CircularProgress size={16} /> : <i className="ri-check-double-line" />}
+                                            startIcon={
+                                                bulkProcessing ? <CircularProgress size={16} /> : <i className='ri-check-double-line' />
+                                            }
                                         >
                                             {bulkProcessing ? 'Processing...' : 'Proceed Advances'}
                                         </Button>
                                         <Button
-                                            variant="outlined"
+                                            variant='outlined'
                                             onClick={exportToPDF}
                                             disabled={loading || rows.length === 0}
-                                            startIcon={<i className="ri-file-download-line" />}
+                                            startIcon={<i className='ri-file-download-line' />}
                                             sx={{ ml: 1 }}
                                         >
                                             Export PDF
@@ -1558,26 +1550,40 @@ const AdvanceRegister = () => {
                                     </div>
                                 </div>
                                 {proceedLoading ? (
-                                    <div className="flex justify-center p-8">
+                                    <div className='flex justify-center p-8'>
                                         <CircularProgress />
                                     </div>
                                 ) : todayAdvances.length === 0 ? (
-                                    <div className="p-8 text-center">
-                                        <Typography color="textSecondary">
+                                    <div className='p-8 text-center'>
+                                        <Typography color='textSecondary'>
                                             No advances found for {selectedDate.toLocaleDateString()}
                                         </Typography>
                                     </div>
                                 ) : (
-                                    <Table className="mt-4">
+                                    <Table className='mt-4'>
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell><strong>Vehicle No</strong></TableCell>
-                                                <TableCell><strong>Driver</strong></TableCell>
-                                                <TableCell><strong>Advance Type</strong></TableCell>
-                                                <TableCell><strong>Amount</strong></TableCell>
-                                                <TableCell><strong>Date</strong></TableCell>
-                                                <TableCell><strong>Status</strong></TableCell>
-                                                <TableCell><strong>Action</strong></TableCell>
+                                                <TableCell>
+                                                    <strong>Vehicle No</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Driver</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Advance Type</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Amount</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Date</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Status</strong>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <strong>Action</strong>
+                                                </TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -1591,7 +1597,7 @@ const AdvanceRegister = () => {
                                                     <TableCell>
                                                         <Typography
                                                             color={advance.status === 'paid' ? 'success.main' : 'warning.main'}
-                                                            fontWeight="bold"
+                                                            fontWeight='bold'
                                                         >
                                                             {advance.status === 'paid' ? 'PAID' : 'UNPAID'}
                                                         </Typography>
@@ -1599,16 +1605,16 @@ const AdvanceRegister = () => {
                                                     <TableCell>
                                                         {advance.status === 'unpaid' ? (
                                                             <Button
-                                                                variant="contained"
-                                                                color="success"
-                                                                size="small"
+                                                                variant='contained'
+                                                                color='success'
+                                                                size='small'
                                                                 onClick={() => markAdvanceAsPaid(advance._id)}
                                                                 disabled={proceedLoading}
                                                             >
                                                                 Mark as Paid
                                                             </Button>
                                                         ) : (
-                                                            <Typography color="textSecondary" variant="body2">
+                                                            <Typography color='textSecondary' variant='body2'>
                                                                 Already Processed
                                                             </Typography>
                                                         )}
@@ -1623,67 +1629,63 @@ const AdvanceRegister = () => {
                     </CardContent>
                 </Card>
                 {/* ================= ADD/MANAGE ADVANCE MODAL ================= */}
-                <Dialog
-                    open={open}
-                    maxWidth="xl"
-                    fullWidth
-                    onClose={handleCloseModal}
-                >
+                <Dialog open={open} maxWidth='xl' fullWidth onClose={handleCloseModal}>
                     <DialogTitle>
                         {trip._id ? `Advance Entry - ${trip.vehicleNo}` : 'Add New Advance'}
                         {trip._id && trip.tripStatus && trip.tripStatus !== 'active' && (
-                            <Typography color="error" variant="body2" sx={{ ml: 2, display: 'inline' }}>
+                            <Typography color='error' variant='body2' sx={{ ml: 2, display: 'inline' }}>
                                 (Trip is {trip.tripStatus} - Read Only)
                             </Typography>
                         )}
                         {formLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
-                        <IconButton
-                            onClick={handleCloseModal}
-                            style={{ float: 'right' }}
-                            disabled={formLoading}
-                        >
+                        <IconButton onClick={handleCloseModal} style={{ float: 'right' }} disabled={formLoading}>
                             ✕
                         </IconButton>
                     </DialogTitle>
                     <DialogContent dividers>
                         {!trip._id ? (
                             /* SELECT TRIP FOR ADDING ADVANCE */
-                            <div className="flex flex-col gap-4">
-                                <Typography variant="h6" className="mb-3">Select a Trip</Typography>
+                            <div className='flex flex-col gap-4'>
+                                <Typography variant='h6' className='mb-3'>
+                                    Select a Trip
+                                </Typography>
                                 {/* <Alert severity="info" sx={{ mb: 2 }}>
                                     <strong>Important:</strong> A vehicle can only have ONE active trip at a time.
                                     Previous trips must be closed/completed/cancelled before starting a new one.
                                 </Alert> */}
                                 <Autocomplete
-                                    options={rows.filter(row =>
-                                        row.vehicleNo &&
-                                        row.availableBalance > 0 &&
-                                        (row.tripStatus === 'active' || row.tripStatus === 'Active')
+                                    options={rows.filter(
+                                        row =>
+                                            row.vehicleNo &&
+                                            row.availableBalance > 0 &&
+                                            (row.tripStatus === 'active' || row.tripStatus === 'Active')
                                     )}
-                                    getOptionLabel={(option) => `${option.vehicleNo} - ${option.driverName || ''} (Available: ${option.availableBalance.toFixed(2)})`}
+                                    getOptionLabel={option =>
+                                        `${option.vehicleNo} - ${option.driverName || ''} (Available: ${option.availableBalance.toFixed(2)})`
+                                    }
                                     value={null}
                                     onChange={(_, newValue) => {
                                         if (newValue) {
                                             openEdit(newValue)
                                         }
                                     }}
-                                    renderInput={(params) => (
+                                    renderInput={params => (
                                         <TextField
                                             {...params}
-                                            label="Search by Vehicle No or Driver"
-                                            placeholder="Type to search..."
+                                            label='Search by Vehicle No or Driver'
+                                            placeholder='Type to search...'
                                             fullWidth
                                         />
                                     )}
                                     renderOption={(props, option) => (
                                         <li {...props}>
                                             <div>
-                                                <Typography variant="body2">{option.vehicleNo}</Typography>
-                                                <Typography variant="caption" color="textSecondary">
-                                                    {option.driverName} | {option.fromLocation} → {option.toLocation} |
-                                                    Available: {option.availableBalance.toFixed(2)}
+                                                <Typography variant='body2'>{option.vehicleNo}</Typography>
+                                                <Typography variant='caption' color='textSecondary'>
+                                                    {option.driverName} | {option.fromLocation} → {option.toLocation} | Available:{' '}
+                                                    {option.availableBalance.toFixed(2)}
                                                 </Typography>
-                                                <Typography variant="caption" color="success.main" display="block">
+                                                <Typography variant='caption' color='success.main' display='block'>
                                                     Trip Date: {option.tripDate || 'N/A'} | Status: ACTIVE
                                                 </Typography>
                                             </div>
@@ -1691,18 +1693,19 @@ const AdvanceRegister = () => {
                                     )}
                                 />
                                 {/* Show vehicles with active trips that cannot be selected */}
-                                {rows.filter(row =>
-                                    row.vehicleNo &&
-                                    row.availableBalance > 0 &&
-                                    row.tripStatus !== 'active' &&
-                                    row.tripStatus !== 'Active'
+                                {rows.filter(
+                                    row =>
+                                        row.vehicleNo &&
+                                        row.availableBalance > 0 &&
+                                        row.tripStatus !== 'active' &&
+                                        row.tripStatus !== 'Active'
                                 ).length > 0 && (
                                         <>
                                             <Divider sx={{ my: 2 }} />
-                                            <Typography variant="subtitle2" color="error">
+                                            <Typography variant='subtitle2' color='error'>
                                                 ⚠️ Vehicles with Pending/Completed Trips (Cannot add advances):
                                             </Typography>
-                                            <Table size="small">
+                                            <Table size='small'>
                                                 <TableHead>
                                                     <TableRow>
                                                         <TableCell>Vehicle No</TableCell>
@@ -1713,27 +1716,28 @@ const AdvanceRegister = () => {
                                                     </TableRow>
                                                 </TableHead>
                                                 <TableBody>
-                                                    {rows.filter(row =>
-                                                        row.vehicleNo &&
-                                                        row.availableBalance > 0 &&
-                                                        row.tripStatus !== 'active' &&
-                                                        row.tripStatus !== 'Active'
-                                                    ).map((row, idx) => (
-                                                        <TableRow key={idx}>
-                                                            <TableCell>{row.vehicleNo}</TableCell>
-                                                            <TableCell>{row.driverName}</TableCell>
-                                                            <TableCell>
-                                                                <Typography color="error.main">
-                                                                    {row.tripStatus}
-                                                                </Typography>
-                                                            </TableCell>
-                                                            <TableCell>{row.tripDate || 'N/A'}</TableCell>
-                                                            <TableCell>{row.availableBalance?.toFixed(2)}</TableCell>
-                                                        </TableRow>
-                                                    ))}
+                                                    {rows
+                                                        .filter(
+                                                            row =>
+                                                                row.vehicleNo &&
+                                                                row.availableBalance > 0 &&
+                                                                row.tripStatus !== 'active' &&
+                                                                row.tripStatus !== 'Active'
+                                                        )
+                                                        .map((row, idx) => (
+                                                            <TableRow key={idx}>
+                                                                <TableCell>{row.vehicleNo}</TableCell>
+                                                                <TableCell>{row.driverName}</TableCell>
+                                                                <TableCell>
+                                                                    <Typography color='error.main'>{row.tripStatus}</Typography>
+                                                                </TableCell>
+                                                                <TableCell>{row.tripDate || 'N/A'}</TableCell>
+                                                                <TableCell>{row.availableBalance?.toFixed(2)}</TableCell>
+                                                            </TableRow>
+                                                        ))}
                                                 </TableBody>
                                             </Table>
-                                            <Typography variant="caption" color="textSecondary">
+                                            <Typography variant='caption' color='textSecondary'>
                                                 These trips must be closed/completed before you can add new advances.
                                             </Typography>
                                         </>
@@ -1745,105 +1749,105 @@ const AdvanceRegister = () => {
                                 <Grid container spacing={4}>
                                     {/* LEFT SIDE - TRIP DETAILS */}
                                     <Grid item xs={12} md={7}>
-                                        <Typography variant="h6" sx={{ mb: 2, color: 'text.secondary' }}>
+                                        <Typography variant='h6' sx={{ mb: 2, color: 'text.secondary' }}>
                                             Trip Details
                                         </Typography>
                                         <Grid container spacing={2}>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Vehicle No"
+                                                    label='Vehicle No'
                                                     value={trip.vehicleNo}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Vehicle Type"
+                                                    label='Vehicle Type'
                                                     value={trip.vehicleType}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="From"
+                                                    label='From'
                                                     value={trip.fromLocation}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="To"
+                                                    label='To'
                                                     value={trip.toLocation}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="LHS No"
+                                                    label='LHS No'
                                                     value={trip.lhsNo}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="IFSC Code"
+                                                    label='IFSC Code'
                                                     value={trip.ifscCode || 'N/A'}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Account Number"
+                                                    label='Account Number'
                                                     value={trip.accountNo || 'N/A'}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Account Holder"
+                                                    label='Account Holder'
                                                     value={trip.accountHolderName || 'N/A'}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Bank Name"
+                                                    label='Bank Name'
                                                     value={trip.bankName || 'N/A'}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Driver Name"
+                                                    label='Driver Name'
                                                     value={trip.driverName}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12} sm={6} md={4}>
                                                 <TextField
-                                                    label="Driver Mobile"
+                                                    label='Driver Mobile'
                                                     value={trip.driverMobile || 'N/A'}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
@@ -1852,51 +1856,51 @@ const AdvanceRegister = () => {
                                     </Grid>
                                     {/* RIGHT SIDE - CALCULATIONS */}
                                     <Grid item xs={12} md={5}>
-                                        <Typography variant="h6" sx={{ mb: 2, color: 'text.secondary' }}>
+                                        <Typography variant='h6' sx={{ mb: 2, color: 'text.secondary' }}>
                                             Calculations
                                         </Typography>
                                         <Grid container spacing={2}>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Diesel Ltr"
+                                                    label='Diesel Ltr'
                                                     value={trip.dieselLtr.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Diesel Rate"
+                                                    label='Diesel Rate'
                                                     value={trip.dieselRate.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Total Diesel Amount"
+                                                    label='Total Diesel Amount'
                                                     value={trip.totalDieselAmount.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Advance Amount"
+                                                    label='Advance Amount'
                                                     value={trip.advanceAmount.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{ readOnly: true }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Total Advance Amount"
+                                                    label='Total Advance Amount'
                                                     value={totalAdvanceAmount.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{
                                                         readOnly: true,
@@ -1906,9 +1910,9 @@ const AdvanceRegister = () => {
                                             </Grid>
                                             <Grid item xs={12} sm={6}>
                                                 <TextField
-                                                    label="Paid Advances"
+                                                    label='Paid Advances'
                                                     value={totalAdvancePaid.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{
                                                         readOnly: true,
@@ -1918,9 +1922,9 @@ const AdvanceRegister = () => {
                                             </Grid>
                                             <Grid item xs={12} sm={6}>
                                                 <TextField
-                                                    label="Proposed/Unpaid"
+                                                    label='Proposed/Unpaid'
                                                     value={totalProposedUnpaid.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{
                                                         readOnly: true,
@@ -1930,26 +1934,24 @@ const AdvanceRegister = () => {
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Balance"
+                                                    label='Balance'
                                                     value={balance.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{
                                                         readOnly: true,
                                                         sx: {
                                                             fontWeight: 700,
-                                                            color: balance < 0 ? 'red' :
-                                                                balance === 0 ? 'success.main' :
-                                                                    'primary.main'
+                                                            color: balance < 0 ? 'red' : balance === 0 ? 'success.main' : 'primary.main'
                                                         }
                                                     }}
                                                 />
                                             </Grid>
                                             <Grid item xs={12}>
                                                 <TextField
-                                                    label="Available for New Advances"
+                                                    label='Available for New Advances'
                                                     value={availableBalance.toFixed(2)}
-                                                    size="small"
+                                                    size='small'
                                                     fullWidth
                                                     InputProps={{
                                                         readOnly: true,
@@ -1958,55 +1960,64 @@ const AdvanceRegister = () => {
                                                             color: availableBalance > 0 ? 'success.main' : 'error.main'
                                                         }
                                                     }}
-                                                    helperText={availableBalance <= 0 ? "No balance available for new advances" : "Maximum amount you can propose"}
+                                                    helperText={
+                                                        availableBalance <= 0
+                                                            ? 'No balance available for new advances'
+                                                            : 'Maximum amount you can propose'
+                                                    }
                                                 />
                                             </Grid>
                                         </Grid>
                                     </Grid>
                                 </Grid>
-                                <Divider className="my-4" />
+                                <Divider className='my-4' />
                                 {/* ADVANCE ENTRY SECTION - Only show if trip is active AND has available balance */}
                                 {trip.tripStatus === 'active' || trip.tripStatus === 'Active' ? (
                                     availableBalance > 0 ? (
                                         <>
-                                            <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
+                                            <Typography variant='h6' className='mb-3'>
+                                                Add New Advance (Available: {availableBalance.toFixed(2)})
+                                            </Typography>
                                             {/* Show warning if trying to add on same date */}
-                                            {advanceForm.advanceType && advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType) && (
-                                                <Alert severity="error" sx={{ mb: 2 }}>
-                                                    ⚠️ An advance of type "{advanceForm.advanceType}" has already been proposed on {new Date(advanceForm.date).toLocaleDateString()}.
-                                                    You cannot propose another advance of the same type on the same date. Please select a different date.
-                                                </Alert>
-                                            )}
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                                            {advanceForm.advanceType &&
+                                                advanceForm.date &&
+                                                checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType) && (
+                                                    <Alert severity='error' sx={{ mb: 2 }}>
+                                                        ⚠️ Advance already been proposed on{' '}
+                                                        {new Date(advanceForm.date).toLocaleDateString()}.
+                                                        Please choose another date.
+                                                    </Alert>
+                                                )}
+                                            <div className='grid grid-cols-1 md:grid-cols-12 gap-3 items-end'>
                                                 {/* Advance Type - 3 columns */}
-                                                <div className="md:col-span-3">
+                                                <div className='md:col-span-3'>
                                                     <TextField
                                                         select
-                                                        label="Advance Type"
+                                                        label='Advance Type'
                                                         value={advanceForm.advanceType}
-                                                        onChange={e =>
-                                                            setAdvanceForm({ ...advanceForm, advanceType: e.target.value })
-                                                        }
+                                                        onChange={e => setAdvanceForm({ ...advanceForm, advanceType: e.target.value })}
                                                         fullWidth
                                                         disabled={formLoading}
                                                     >
-                                                        <MenuItem value="">Select Type</MenuItem>
+                                                        <MenuItem value=''>Select Type</MenuItem>
                                                         {getAvailableAdvanceTypes().map(t => (
-                                                            <MenuItem key={t} value={t}>{t}</MenuItem>
+                                                            <MenuItem key={t} value={t}>
+                                                                {t}
+                                                            </MenuItem>
                                                         ))}
                                                         {getAvailableAdvanceTypes().length === 0 && (
-                                                            <MenuItem value="" disabled>All advance types already used</MenuItem>
+                                                            <MenuItem value='' disabled>
+                                                                All advance types already used
+                                                            </MenuItem>
                                                         )}
                                                     </TextField>
                                                 </div>
-
                                                 {/* Amount - 2 columns */}
-                                                <div className="md:col-span-2">
+                                                <div className='md:col-span-2'>
                                                     <TextField
-                                                        label="Amount"
-                                                        type="text"
-                                                        inputMode="decimal"
-
+                                                        label='Amount'
+                                                        type='text'
+                                                        inputMode='decimal'
                                                         value={advanceForm.amount}
                                                         fullWidth
                                                         disabled={formLoading}
@@ -2014,7 +2025,10 @@ const AdvanceRegister = () => {
                                                             const value = e.target.value
                                                             const numValue = parseFloat(value) || 0
                                                             if (numValue > availableBalance) {
-                                                                showSnackbar(`Amount cannot exceed available balance (${availableBalance.toFixed(2)})`, 'warning')
+                                                                showSnackbar(
+                                                                    `Amount cannot exceed available balance (${availableBalance.toFixed(2)})`,
+                                                                    'warning'
+                                                                )
                                                             }
                                                             setAdvanceForm(prev => ({
                                                                 ...prev,
@@ -2026,20 +2040,19 @@ const AdvanceRegister = () => {
                                                         error={parseFloat(advanceForm.amount || 0) > availableBalance}
                                                     />
                                                 </div>
-
                                                 {/* Date - 2 columns */}
-                                                <div className="md:col-span-2">
+                                                <div className='md:col-span-2'>
                                                     <DatePicker
-                                                        label="Date"
+                                                        label='Date'
                                                         value={advanceForm.date ? new Date(advanceForm.date) : null}
                                                         disabled
-                                                        onChange={(newDate) => {
-                                                            if (!newDate) return;
-                                                            const formattedDate = newDate.toISOString().split("T")[0];
-                                                            setAdvanceForm((prev) => ({
+                                                        onChange={newDate => {
+                                                            if (!newDate) return
+                                                            const formattedDate = newDate.toISOString().split('T')[0]
+                                                            setAdvanceForm(prev => ({
                                                                 ...prev,
-                                                                date: formattedDate,
-                                                            }));
+                                                                date: formattedDate
+                                                            }))
                                                         }}
                                                         slotProps={{
                                                             textField: {
@@ -2047,56 +2060,41 @@ const AdvanceRegister = () => {
                                                                 inputProps: { readOnly: true },
                                                                 error:
                                                                     advanceForm.advanceType &&
-                                                                    checkAdvanceExistsOnDate(
-                                                                        advanceForm.date,
-                                                                        advanceForm.advanceType
-                                                                    ),
+                                                                    checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType),
                                                                 helperText:
                                                                     advanceForm.advanceType &&
-                                                                        checkAdvanceExistsOnDate(
-                                                                            advanceForm.date,
-                                                                            advanceForm.advanceType
-                                                                        )
-                                                                        ? "Already proposed on this date"
-                                                                        : "",
-                                                            },
+                                                                        checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType)
+                                                                        ? 'Already proposed on this date'
+                                                                        : ''
+                                                            }
                                                         }}
-                                                        format="dd/MM/yyyy"
-                                                        shouldDisableDate={(date) => {
-                                                            const dateStr = date.toISOString().split("T")[0];
-                                                            const advancesOnDate =
-                                                                trip.advances?.filter((adv) => adv.date === dateStr) || [];
-                                                            const usedTypesOnDate = advancesOnDate.map(
-                                                                (adv) => adv.advanceType
-                                                            );
-                                                            const availableTypes = getAvailableAdvanceTypes();
+                                                        format='dd/MM/yyyy'
+                                                        shouldDisableDate={date => {
+                                                            const dateStr = date.toISOString().split('T')[0]
+                                                            const advancesOnDate = trip.advances?.filter(adv => adv.date === dateStr) || []
+                                                            const usedTypesOnDate = advancesOnDate.map(adv => adv.advanceType)
+                                                            const availableTypes = getAvailableAdvanceTypes()
                                                             return (
                                                                 availableTypes.length > 0 &&
-                                                                availableTypes.every((type) =>
-                                                                    usedTypesOnDate.includes(type)
-                                                                )
-                                                            );
+                                                                availableTypes.every(type => usedTypesOnDate.includes(type))
+                                                            )
                                                         }}
                                                     />
                                                 </div>
-
                                                 {/* Remark - 3 columns */}
-                                                <div className="md:col-span-3">
+                                                <div className='md:col-span-3'>
                                                     <TextField
-                                                        label="Remark"
+                                                        label='Remark'
                                                         value={advanceForm.remark}
-                                                        onChange={e =>
-                                                            setAdvanceForm({ ...advanceForm, remark: e.target.value })
-                                                        }
+                                                        onChange={e => setAdvanceForm({ ...advanceForm, remark: e.target.value })}
                                                         fullWidth
                                                         disabled={formLoading}
                                                     />
                                                 </div>
-
                                                 {/* Button - 2 columns */}
-                                                <div className="md:col-span-2">
-                                                    <Button
-                                                        variant="contained"
+                                                <div className='md:col-span-2'>
+                                                    {/* <Button
+                                                        variant='contained'
                                                         onClick={addAdvance}
                                                         fullWidth
                                                         disabled={
@@ -2106,8 +2104,27 @@ const AdvanceRegister = () => {
                                                             getAvailableAdvanceTypes().length === 0 ||
                                                             parseFloat(advanceForm.amount || 0) > availableBalance ||
                                                             parseFloat(advanceForm.amount || 0) <= 0 ||
-                                                            (advanceForm.advanceType && advanceForm.date &&
+                                                            (advanceForm.advanceType &&
+                                                                advanceForm.date &&
                                                                 checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType))
+                                                        }
+                                                        startIcon={formLoading && <CircularProgress size={16} />}
+                                                    >
+                                                        Add Advance
+                                                    </Button> */}
+                                                    <Button
+                                                        variant='contained'
+                                                        onClick={addAdvance}
+                                                        fullWidth
+                                                        disabled={
+                                                            formLoading ||
+                                                            !advanceForm.advanceType ||
+                                                            !advanceForm.amount ||
+                                                            getAvailableAdvanceTypes().length === 0 ||
+                                                            parseFloat(advanceForm.amount || 0) > availableBalance ||
+                                                            parseFloat(advanceForm.amount || 0) <= 0 ||
+                                                            // Sirf date check karo, advanceType mat check karo
+                                                            (advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date))
                                                         }
                                                         startIcon={formLoading && <CircularProgress size={16} />}
                                                     >
@@ -2116,64 +2133,44 @@ const AdvanceRegister = () => {
                                                 </div>
                                             </div>
                                             {/* Show existing advances for the selected date */}
-                                            {/* {advanceForm.date && trip.advances?.filter(adv => adv.date === advanceForm.date).length > 0 && (
-                                                <Box sx={{ mt: 2 }}>
-                                                    <Typography variant="subtitle2" color="text.secondary">
-                                                        Existing advances on {new Date(advanceForm.date).toLocaleDateString()}:
-                                                    </Typography>
-                                                    <Table size="small" sx={{ mt: 1 }}>
-                                                        <TableHead>
-                                                            <TableRow>
-                                                                <TableCell>Type</TableCell>
-                                                                <TableCell>Amount</TableCell>
-                                                                <TableCell>Status</TableCell>
-                                                            </TableRow>
-                                                        </TableHead>
-                                                        <TableBody>
-                                                            {trip.advances
-                                                                .filter(adv => adv.date === advanceForm.date)
-                                                                .map((adv, idx) => (
-                                                                    <TableRow key={idx}>
-                                                                        <TableCell>{adv.advanceType}</TableCell>
-                                                                        <TableCell>{adv.amount}</TableCell>
-                                                                        <TableCell>
-                                                                            <Typography
-                                                                                color={adv.status === 'paid' ? 'success.main' : 'warning.main'}
-                                                                                variant="body2"
-                                                                            >
-                                                                                {adv.status}
-                                                                            </Typography>
-                                                                        </TableCell>
-                                                                    </TableRow>
-                                                                ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </Box>
-                                            )} */}
                                         </>
                                     ) : (
-                                        <Alert severity="warning" sx={{ mb: 3 }}>
+                                        <Alert severity='warning' sx={{ mb: 3 }}>
                                             No available balance for new advances. Available: {availableBalance.toFixed(2)}
                                         </Alert>
                                     )
                                 ) : (
-                                    <Alert severity="warning" sx={{ mb: 3 }}>
+                                    <Alert severity='warning' sx={{ mb: 3 }}>
                                         This trip is {trip.tripStatus}. Cannot add new advances. You can only view existing advances.
                                     </Alert>
                                 )}
                                 {/* ADVANCES TABLE */}
                                 {trip.advances && trip.advances.length > 0 && (
                                     <>
-                                        <Typography variant="h6" className="mt-6 mb-3">Existing Advances</Typography>
-                                        <Table size="small" className="mt-2">
+                                        <Typography variant='h6' className='mt-6 mb-3'>
+                                            Existing Advances
+                                        </Typography>
+                                        <Table size='small' className='mt-2'>
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell><strong>Type</strong></TableCell>
-                                                    <TableCell><strong>Amount</strong></TableCell>
-                                                    <TableCell><strong>Date</strong></TableCell>
-                                                    <TableCell><strong>Status</strong></TableCell>
-                                                    <TableCell><strong>Remark</strong></TableCell>
-                                                    <TableCell><strong>Action</strong></TableCell>
+                                                    <TableCell>
+                                                        <strong>Type</strong>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <strong>Amount</strong>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <strong>Date</strong>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <strong>Status</strong>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <strong>Remark</strong>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <strong>Action</strong>
+                                                    </TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -2181,12 +2178,14 @@ const AdvanceRegister = () => {
                                                     <TableRow key={advance._id || index}>
                                                         <TableCell>{advance.advanceType}</TableCell>
                                                         <TableCell>{advance.amount}</TableCell>
-                                                        <TableCell>{advance.date || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            {advance.date ? new Date(advance.date).toLocaleDateString('en-GB') : 'N/A'}
+                                                        </TableCell>
                                                         <TableCell>
                                                             <Typography
-                                                                variant="body2"
+                                                                variant='body2'
                                                                 color={advance.status === 'paid' ? 'success.main' : 'warning.main'}
-                                                                fontWeight="bold"
+                                                                fontWeight='bold'
                                                             >
                                                                 {advance.status === 'paid' ? 'PAID' : 'UNPAID'}
                                                             </Typography>
@@ -2196,8 +2195,8 @@ const AdvanceRegister = () => {
                                                             {advance.status === 'unpaid' &&
                                                                 (trip.tripStatus === 'active' || trip.tripStatus === 'Active') ? (
                                                                 <Button
-                                                                    color="error"
-                                                                    size="small"
+                                                                    color='error'
+                                                                    size='small'
                                                                     onClick={() => deleteAdvance(advance._id)}
                                                                     disabled={formLoading}
                                                                     sx={{ mr: 1 }}
@@ -2205,7 +2204,7 @@ const AdvanceRegister = () => {
                                                                     Delete
                                                                 </Button>
                                                             ) : (
-                                                                <Typography variant="body2" color="textSecondary">
+                                                                <Typography variant='body2' color='textSecondary'>
                                                                     {advance.status === 'paid' ? 'Processed' : 'Cannot delete'}
                                                                 </Typography>
                                                             )}
@@ -2218,20 +2217,12 @@ const AdvanceRegister = () => {
                                 )}
                             </>
                         )}
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button
-                                variant="contained"
-                                onClick={handleCloseModal}
-                                disabled={formLoading}
-                            >
+                        <div className='flex justify-end gap-2 mt-4'>
+                            <Button variant='contained' onClick={handleCloseModal} disabled={formLoading}>
                                 Close
                             </Button>
                             {trip._id && (
-                                <Button
-                                    variant="outlined"
-                                    color="primary"
-                                    onClick={handleTripPrint}
-                                >
+                                <Button variant='outlined' color='primary' onClick={handleTripPrint}>
                                     Print Trip Sheet
                                 </Button>
                             )}
@@ -2239,61 +2230,60 @@ const AdvanceRegister = () => {
                     </DialogContent>
                 </Dialog>
                 {/* ================= PROCEED ADVANCES MODAL ================= */}
-                <Dialog
-                    open={proceedOpen}
-                    maxWidth="lg"
-                    fullWidth
-                    onClose={handleCloseProceedModal}
-                >
+                <Dialog open={proceedOpen} maxWidth='lg' fullWidth onClose={handleCloseProceedModal}>
                     <DialogTitle>
                         Proceed Advances - {selectedDate.toLocaleDateString()}
                         {proceedLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
-                        <IconButton
-                            onClick={handleCloseProceedModal}
-                            style={{ float: 'right' }}
-                            disabled={proceedLoading}
-                        >
+                        <IconButton onClick={handleCloseProceedModal} style={{ float: 'right' }} disabled={proceedLoading}>
                             ✕
                         </IconButton>
                     </DialogTitle>
                     <DialogContent dividers>
-                        <div className="flex justify-between items-center mb-4">
+                        <div className='flex justify-between items-center mb-4'>
                             <DatePicker
-                                label="Select Date"
+                                label='Select Date'
                                 value={selectedDate}
-                                onChange={(newDate) => setSelectedDate(newDate)}
+                                onChange={newDate => setSelectedDate(newDate)}
                                 slotProps={{ textField: { size: 'small', sx: { width: 200 } } }}
-                                format="dd/MM/yyyy"
+                                format='dd/MM/yyyy'
                             />
-                            <Button
-                                variant="outlined"
-                                onClick={fetchTodayAdvances}
-                                disabled={proceedLoading}
-                            >
+                            <Button variant='outlined' onClick={fetchTodayAdvances} disabled={proceedLoading}>
                                 Refresh
                             </Button>
                         </div>
                         {proceedLoading ? (
-                            <div className="flex justify-center p-8">
+                            <div className='flex justify-center p-8'>
                                 <CircularProgress />
                             </div>
                         ) : todayAdvances.length === 0 ? (
-                            <div className="p-8 text-center">
-                                <Typography color="textSecondary">
-                                    No advances found for {selectedDate.toLocaleDateString()}
-                                </Typography>
+                            <div className='p-8 text-center'>
+                                <Typography color='textSecondary'>No advances found for {selectedDate.toLocaleDateString()}</Typography>
                             </div>
                         ) : (
                             <Table>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell><strong>Vehicle No</strong></TableCell>
-                                        <TableCell><strong>Driver</strong></TableCell>
-                                        <TableCell><strong>Advance Type</strong></TableCell>
-                                        <TableCell><strong>Amount</strong></TableCell>
-                                        <TableCell><strong>Date</strong></TableCell>
-                                        <TableCell><strong>Status</strong></TableCell>
-                                        <TableCell><strong>Action</strong></TableCell>
+                                        <TableCell>
+                                            <strong>Vehicle No</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Driver</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Advance Type</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Amount</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Date</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Status</strong>
+                                        </TableCell>
+                                        <TableCell>
+                                            <strong>Action</strong>
+                                        </TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -2307,7 +2297,7 @@ const AdvanceRegister = () => {
                                             <TableCell>
                                                 <Typography
                                                     color={advance.status === 'paid' ? 'success.main' : 'warning.main'}
-                                                    fontWeight="bold"
+                                                    fontWeight='bold'
                                                 >
                                                     {advance.status === 'paid' ? 'PAID' : 'UNPAID'}
                                                 </Typography>
@@ -2315,16 +2305,16 @@ const AdvanceRegister = () => {
                                             <TableCell>
                                                 {advance.status === 'unpaid' ? (
                                                     <Button
-                                                        variant="contained"
-                                                        color="success"
-                                                        size="small"
+                                                        variant='contained'
+                                                        color='success'
+                                                        size='small'
                                                         onClick={() => markAdvanceAsPaid(advance._id)}
                                                         disabled={proceedLoading}
                                                     >
                                                         Mark as Paid
                                                     </Button>
                                                 ) : (
-                                                    <Typography color="textSecondary" variant="body2">
+                                                    <Typography color='textSecondary' variant='body2'>
                                                         Already Processed
                                                     </Typography>
                                                 )}
@@ -2334,12 +2324,8 @@ const AdvanceRegister = () => {
                                 </TableBody>
                             </Table>
                         )}
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button
-                                variant="contained"
-                                onClick={handleCloseProceedModal}
-                                disabled={proceedLoading}
-                            >
+                        <div className='flex justify-end gap-2 mt-4'>
+                            <Button variant='contained' onClick={handleCloseProceedModal} disabled={proceedLoading}>
                                 Close
                             </Button>
                         </div>
@@ -2353,11 +2339,7 @@ const AdvanceRegister = () => {
                 onClose={handleCloseSnackbar}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             >
-                <Alert
-                    onClose={handleCloseSnackbar}
-                    severity={snackbar.severity}
-                    variant="filled"
-                >
+                <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant='filled'>
                     {snackbar.message}
                 </Alert>
             </Snackbar>

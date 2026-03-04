@@ -22,23 +22,46 @@ import OptionMenu from '@core/components/option-menu'
 import CustomAvatar from '@core/components/mui/Avatar'
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
+import { Truck, Bus, Car, Van, Package } from "lucide-react";
+
 // Icons for different vehicle types
+// const getVehicleIcon = (model) => {
+//     // You can map different models to different icons
+//     const modelLower = model?.toLowerCase() || ''
+//     if (modelLower.includes('truck') || modelLower.includes('lorry'))
+//         return '/images/vehicles/truck.png'
+//     if (modelLower.includes('bus'))
+//         return '/images/vehicles/bus.png'
+//     if (modelLower.includes('van'))
+//         return '/images/vehicles/van.png'
+//     if (modelLower.includes('car'))
+//         return '/images/vehicles/car.png'
+//     if (modelLower.includes('pickup'))
+//         return '/images/vehicles/pickup.png'
+//     // Default vehicle icon
+//     return '/images/vehicles/default-vehicle.png'
+// }
 const getVehicleIcon = (model) => {
-    // You can map different models to different icons
-    const modelLower = model?.toLowerCase() || ''
-    if (modelLower.includes('truck') || modelLower.includes('lorry'))
-        return '/images/vehicles/truck.png'
-    if (modelLower.includes('bus'))
-        return '/images/vehicles/bus.png'
-    if (modelLower.includes('van'))
-        return '/images/vehicles/van.png'
-    if (modelLower.includes('car'))
-        return '/images/vehicles/car.png'
-    if (modelLower.includes('pickup'))
-        return '/images/vehicles/pickup.png'
-    // Default vehicle icon
-    return '/images/vehicles/default-vehicle.png'
-}
+    const modelLower = model?.toLowerCase() || "";
+
+    if (modelLower.includes("truck") || modelLower.includes("lorry"))
+        return <Truck size={20} />;
+
+    if (modelLower.includes("bus"))
+        return <Bus size={20} />;
+
+    if (modelLower.includes("van"))
+        return <Van size={20} />;
+
+    if (modelLower.includes("car"))
+        return <Car size={20} />;
+
+    if (modelLower.includes("pickup"))
+        return <Package size={20} />;
+
+    // Default icon
+    return <Car size={20} />;
+};
 const MarketTabBasedVehicleModels = () => {
     // State
     const [value, setValue] = useState('')
@@ -114,13 +137,13 @@ const MarketTabBasedVehicleModels = () => {
                     'is-[92px] bs-[86px] border-2 bg-transparent rounded mb-2'
                 )}
             >
-                <img
+                {/* <img
                     src={getVehicleIcon(model)}
                     alt={model}
                     width={50}
                     height={40}
                     className='object-contain'
-                />
+                /> */}
             </Avatar>
             <Typography variant='caption' className='font-medium text-center'>
                 {model}

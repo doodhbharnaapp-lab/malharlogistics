@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { MongoClient, ObjectId } from 'mongodb'
-const TRIPS_COLLECTION = 'trips'
-const ADVANCES_COLLECTION = 'advances'
+const TRIPS_COLLECTION = 'markettrips'
+const ADVANCES_COLLECTION = 'marketadvances'
 const client = new MongoClient(process.env.DATABASE_URL)
 async function getDB() {
     await client.connect()

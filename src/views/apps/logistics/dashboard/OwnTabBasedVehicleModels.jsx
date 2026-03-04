@@ -108,20 +108,15 @@ const TabBasedVehicleModels = () => {
     const RenderTabAvatar = ({ model, count }) => (
         <Box className='flex flex-col items-center'>
             <Avatar
-                variant='rounded'
+                variant="rounded"
                 className={classnames(
-                    value === model ? 'border-solid border-primary' : 'border-dashed',
-                    'is-[92px] bs-[86px] border-2 bg-transparent rounded mb-2'
+                    value === model ? "border-solid border-primary" : "border-dashed",
+                    "is-[92px] bs-[86px] border-2 bg-transparent rounded mb-2 flex items-center justify-center"
                 )}
             >
-                <img
-                    src={getVehicleIcon(model)}
-                    alt={model}
-                    width={50}
-                    height={40}
-                    className='object-contain'
-                />
+                {/* {getVehicleIcon(model)} */}
             </Avatar>
+
             <Typography variant='caption' className='font-medium text-center'>
                 {model}
             </Typography>

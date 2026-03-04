@@ -873,28 +873,60 @@ const AdvanceRegister = () => {
         }
     }
     /* ================= CHECK IF ADVANCE EXISTS ON DATE ================= */
-    const checkAdvanceExistsOnDate = (date, advanceType) => {
+    // const checkAdvanceExistsOnDate = (date, advanceType) => {
+    //     if (!trip.advances || trip.advances.length === 0) return false
+    //     console.log('Checking advances:', {
+    //         date: date,
+    //         advanceType: advanceType,
+    //         allAdvances: trip.advances
+    //     })
+    //     // Check if there's already an advance (paid or unpaid) on this date
+    //     const existingAdvance = trip.advances.find(adv => {
+    //         // Compare dates as strings to avoid any format issues
+    //         const advDate = adv.date || ''
+    //         const compareDate = date || ''
+    //         // Compare advance type (case insensitive)
+    //         const advType = (adv.advanceType || '').toLowerCase().trim()
+    //         const searchType = (advanceType || '').toLowerCase().trim()
+    //         const dateMatch = advDate === compareDate
+    //         const typeMatch = advType === searchType
+    //         if (dateMatch && typeMatch) {
+    //             console.log('Found matching advance:', adv)
+    //         }
+    //         return dateMatch && typeMatch
+    //     })
+    //     return !!existingAdvance
+    // }
+    const checkAdvanceExistsOnDate = (date) => {
         if (!trip.advances || trip.advances.length === 0) return false
-        console.log('Checking advances:', {
-            date: date,
-            advanceType: advanceType,
-            allAdvances: trip.advances
+
+        console.log('Checking if any advance exists on date:', {
+            searchDate: date,
+            existingAdvances: trip.advances.map(a => ({
+                date: a.date,
+                type: a.advanceType,
+                status: a.status
+            }))
         })
-        // Check if there's already an advance (paid or unpaid) on this date
+
+        // Check if ANY advance (UNPAID) exists on this date
         const existingAdvance = trip.advances.find(adv => {
-            // Compare dates as strings to avoid any format issues
             const advDate = adv.date || ''
             const compareDate = date || ''
-            // Compare advance type (case insensitive)
-            const advType = (adv.advanceType || '').toLowerCase().trim()
-            const searchType = (advanceType || '').toLowerCase().trim()
+
+            // Sirf date match check karo, advanceType mat check karo
             const dateMatch = advDate === compareDate
-            const typeMatch = advType === searchType
-            if (dateMatch && typeMatch) {
-                console.log('Found matching advance:', adv)
+
+            // Sirf UNPAID advances check karo
+            const isUnpaid = adv.status === 'unpaid'
+
+            if (dateMatch && isUnpaid) {
+                console.log('Found existing UNPAID advance on this date:', adv)
+                return true
             }
-            return dateMatch && typeMatch
+            return false
         })
+
         return !!existingAdvance
     }
     /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
@@ -1948,7 +1980,6 @@ const AdvanceRegister = () => {
             remark: ''
             // ❌ do NOT touch date
         }));
-
         setOpen(false);
         fetchTrips();
     };
@@ -2236,13 +2267,13 @@ const AdvanceRegister = () => {
                                 <div className="flex justify-between items-center mt-4">
                                     <Typography variant="h5">Proceed Advances</Typography>
                                     <div className="flex gap-2 items-center">
-                                        <DatePicker
+                                        {/* <DatePicker
                                             label="Select Date"
                                             value={selectedDate}
                                             onChange={(newDate) => setSelectedDate(newDate)}
                                             slotProps={{ textField: { size: 'small' } }}
                                             format="dd/MM/yyyy"
-                                        />
+                                        /> */}
                                         <Button
                                             variant="contained"
                                             onClick={fetchTodayAdvances}
@@ -2686,9 +2717,10 @@ const AdvanceRegister = () => {
                                             <Typography variant="h6" className="mb-3">Add New Advance (Available: {availableBalance.toFixed(2)})</Typography>
                                             {/* Show warning if trying to add on same date */}
                                             {advanceForm.advanceType && advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType) && (
-                                                <Alert severity="error" sx={{ mb: 2 }}>
-                                                    ⚠️ An advance of type "{advanceForm.advanceType}" has already been proposed on {new Date(advanceForm.date).toLocaleDateString()}.
-                                                    You cannot propose another advance of the same type on the same date. Please select a different date.
+                                                <Alert severity='error' sx={{ mb: 2 }}>
+                                                    ⚠️ Advance already been proposed on{' '}
+                                                    {new Date(advanceForm.date).toLocaleDateString()}.
+                                                    Please choose another date.
                                                 </Alert>
                                             )}
                                             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
@@ -2738,9 +2770,7 @@ const AdvanceRegister = () => {
                                                     value={advanceForm.date ? new Date(advanceForm.date) : null}
                                                     onChange={(newDate) => {
                                                         if (!newDate) return;
-
                                                         const formattedDate = newDate.toISOString().split("T")[0];
-
                                                         setAdvanceForm((prev) => ({
                                                             ...prev,
                                                             date: formattedDate,
@@ -2771,13 +2801,10 @@ const AdvanceRegister = () => {
                                                         const dateStr = date.toISOString().split("T")[0];
                                                         const advancesOnDate =
                                                             trip.advances?.filter((adv) => adv.date === dateStr) || [];
-
                                                         const usedTypesOnDate = advancesOnDate.map(
                                                             (adv) => adv.advanceType
                                                         );
-
                                                         const availableTypes = getAvailableAdvanceTypes();
-
                                                         return (
                                                             availableTypes.length > 0 &&
                                                             availableTypes.every((type) =>
@@ -2797,7 +2824,6 @@ const AdvanceRegister = () => {
                                                     }}
                                                     format="dd/MM/yyyy"
                                                 />
-
                                                 <TextField
                                                     label="Remark"
                                                     value={advanceForm.remark}
@@ -2807,7 +2833,7 @@ const AdvanceRegister = () => {
                                                     fullWidth
                                                     disabled={formLoading}
                                                 />
-                                                <Button
+                                                {/* <Button
                                                     variant="contained"
                                                     onClick={addAdvance}
                                                     fullWidth
@@ -2821,6 +2847,24 @@ const AdvanceRegister = () => {
                                                         // NEW: Disable if advance already exists on this date
                                                         (advanceForm.advanceType && advanceForm.date &&
                                                             checkAdvanceExistsOnDate(advanceForm.date, advanceForm.advanceType))
+                                                    }
+                                                    startIcon={formLoading && <CircularProgress size={16} />}
+                                                >
+                                                    Add Advance
+                                                </Button> */}
+                                                <Button
+                                                    variant='contained'
+                                                    onClick={addAdvance}
+                                                    fullWidth
+                                                    disabled={
+                                                        formLoading ||
+                                                        !advanceForm.advanceType ||
+                                                        !advanceForm.amount ||
+                                                        getAvailableAdvanceTypes().length === 0 ||
+                                                        parseFloat(advanceForm.amount || 0) > availableBalance ||
+                                                        parseFloat(advanceForm.amount || 0) <= 0 ||
+                                                        // Sirf date check karo, advanceType mat check karo
+                                                        (advanceForm.date && checkAdvanceExistsOnDate(advanceForm.date))
                                                     }
                                                     startIcon={formLoading && <CircularProgress size={16} />}
                                                 >
@@ -2893,7 +2937,11 @@ const AdvanceRegister = () => {
                                                     <TableRow key={advance._id || index}>
                                                         <TableCell>{advance.advanceType}</TableCell>
                                                         <TableCell>{advance.amount}</TableCell>
-                                                        <TableCell>{advance.date || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            {advance.date
+                                                                ? new Date(advance.date).toLocaleDateString('en-GB')
+                                                                : 'N/A'}
+                                                        </TableCell>
                                                         <TableCell>
                                                             <Typography
                                                                 variant="body2"
