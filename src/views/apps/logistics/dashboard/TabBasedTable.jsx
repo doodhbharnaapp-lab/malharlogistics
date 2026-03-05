@@ -200,7 +200,7 @@ const TabBasedTable = () => {
         </head>
         <body>
           <h1>🚛 ${reportTitle}</h1>
-          <h2>Generated on: ${formatDateTime(new Date())}</h2>
+          <h2>Generated on: ${(new Date().toLocaleDateString('en-IN', {}))}</h2>
           <table>
             <thead>
               <tr>
@@ -222,7 +222,10 @@ const TabBasedTable = () => {
                     <td><strong>${doc.vehicleNo}</strong></td>
                     <td>${doc.ownerName}</td>
                     <td>${doc.documentName}</td>
-                    <td class="${dateClass}">${formatDate(doc.expiryDate)}</td>
+                    <td>${new Date(doc.expiryDate).toLocaleDateString('en-IN', {
+
+      })}</td>
+
                     <td><span class="status-badge ${statusClass}">${doc.status}</span></td>
                   </tr>
                 `
@@ -389,7 +392,9 @@ const TabBasedTable = () => {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {formatDateTime(vehicle.createdAt)}
+                          {new Date(vehicle.createdAt).toLocaleDateString('en-IN', {
+
+                          })}
                         </Typography>
                       </TableCell>
                     </StyledTableRow>
@@ -560,7 +565,9 @@ const TabBasedTable = () => {
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
-                          {formatDate(trip.tripDate)}
+                          {new Date(trip.tripDate).toLocaleDateString('en-IN', {
+
+                          })}
                         </Typography>
                       </TableCell>
                     </StyledTableRow>
@@ -786,8 +793,9 @@ const TabBasedTable = () => {
                               'success.main'}
                           fontWeight={500}
                         >
-                          {formatDate(doc.expiryDate)}
-                        </Typography>
+                          {new Date(doc.expiryDate).toLocaleDateString('en-IN', {
+
+                          })}                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip

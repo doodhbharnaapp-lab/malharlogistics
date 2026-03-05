@@ -199,9 +199,7 @@ const MarketTabBasedVehicleModels = () => {
                                     <td className='text-end'>
                                         <Typography variant='caption'>
                                             {new Date(vehicle.createdAt).toLocaleDateString('en-IN', {
-                                                day: '2-digit',
-                                                month: 'short',
-                                                year: 'numeric'
+
                                             })}
                                         </Typography>
                                     </td>

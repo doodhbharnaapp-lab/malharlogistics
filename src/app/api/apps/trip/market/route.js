@@ -1027,6 +1027,126 @@ async function recordStatusChange(db, tripId, oldStatus, newStatus, remarks, cha
 }
 
 /* ================= GET STATUS HISTORY ================= */
+// export async function GET(request) {
+//     try {
+//         const session = await getServerSession(authOptions)
+//         if (!session) {
+//             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+//         }
+
+//         // ✅ CHECK PERMISSION - marketTrips:read
+//         const hasPermission = await checkAnyPermission([
+//             PERMISSIONS.marketTrips.READ,
+//             PERMISSIONS.marketTrips.CREATE,
+//             PERMISSIONS.marketTrips.WRITE
+//         ])(async () => true)(request)
+
+//         if (!hasPermission && session.user.role !== 'admin') {
+//             return NextResponse.json({
+//                 error: 'Forbidden',
+//                 message: 'You need marketTrips:read permission'
+//             }, { status: 403 })
+//         }
+
+//         const { searchParams } = new URL(request.url)
+//         const id = searchParams.get('id')
+//         const getHistory = searchParams.get('history') === 'true'
+
+//         // Get status history for a specific trip
+//         if (getHistory && id) {
+//             if (!ObjectId.isValid(id)) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Invalid ID' },
+//                     { status: 400 }
+//                 )
+//             }
+//             const db = await getDB()
+//             const history = await db
+//                 .collection(TRIP_STATUS_HISTORY_COLLECTION)
+//                 .find({ tripId: new ObjectId(id) })
+//                 .sort({ changedAt: -1 })
+//                 .toArray()
+
+//             return NextResponse.json({
+//                 success: true,
+//                 data: history,
+//                 count: history.length
+//             })
+//         }
+
+//         // If ID provided, return single trip with status history
+//         if (id) {
+//             if (!ObjectId.isValid(id)) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Invalid ID' },
+//                     { status: 400 }
+//                 )
+//             }
+//             const db = await getDB()
+//             const trip = await db.collection(TRIPS_COLLECTION).findOne({
+//                 _id: new ObjectId(id),
+//                 isDeleted: { $ne: true }
+//             })
+
+//             if (!trip) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Trip not found' },
+//                     { status: 404 }
+//                 )
+//             }
+
+//             // Get status history if requested
+//             if (searchParams.get('withHistory') === 'true') {
+//                 const history = await db
+//                     .collection(TRIP_STATUS_HISTORY_COLLECTION)
+//                     .find({ tripId: new ObjectId(id) })
+//                     .sort({ changedAt: -1 })
+//                     .toArray()
+
+//                 return NextResponse.json(
+//                     {
+//                         success: true,
+//                         data: {
+//                             ...trip,
+//                             statusHistory: history
+//                         }
+//                     },
+//                     { status: 200 }
+//                 )
+//             }
+
+//             return NextResponse.json(
+//                 { success: true, data: trip },
+//                 { status: 200 }
+//             )
+//         }
+
+//         // Otherwise return all trips
+//         const db = await getDB()
+//         const trips = await db
+//             .collection(TRIPS_COLLECTION)
+//             .find({ isDeleted: { $ne: true } })
+//             .sort({ tripDate: -1, createdAt: -1 })
+//             .toArray()
+
+//         return NextResponse.json({
+//             success: true,
+//             data: trips,
+//             count: trips.length
+//         })
+//     } catch (error) {
+//         console.error('GET trips error:', error)
+//         return NextResponse.json(
+//             {
+//                 success: false,
+//                 error: error.message,
+//                 message: 'Failed to fetch trips'
+//             },
+//             { status: 500 }
+//         )
+//     }
+// }
+
 export async function GET(request) {
     try {
         const session = await getServerSession(authOptions)
@@ -1034,23 +1154,28 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // ✅ CHECK PERMISSION - marketTrips:read
+        // ✅ CHECK PERMISSION - trips:read
         const hasPermission = await checkAnyPermission([
-            PERMISSIONS.marketTrips.READ,
-            PERMISSIONS.marketTrips.CREATE,
-            PERMISSIONS.marketTrips.WRITE
+            PERMISSIONS.trips.READ,
+            PERMISSIONS.trips.CREATE,
+            PERMISSIONS.trips.WRITE
         ])(async () => true)(request)
 
         if (!hasPermission && session.user.role !== 'admin') {
             return NextResponse.json({
                 error: 'Forbidden',
-                message: 'You need marketTrips:read permission'
+                message: 'You need trips:read permission'
             }, { status: 403 })
         }
 
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
         const getHistory = searchParams.get('history') === 'true'
+        const vehicleNo = searchParams.get('vehicleNo')
+        const tripStatus = searchParams.get('status')
+        const fromDate = searchParams.get('fromDate')
+        const toDate = searchParams.get('toDate')
+        const withHistory = searchParams.get('withHistory') === 'true'
 
         // Get status history for a specific trip
         if (getHistory && id) {
@@ -1066,7 +1191,6 @@ export async function GET(request) {
                 .find({ tripId: new ObjectId(id) })
                 .sort({ changedAt: -1 })
                 .toArray()
-
             return NextResponse.json({
                 success: true,
                 data: history,
@@ -1074,7 +1198,7 @@ export async function GET(request) {
             })
         }
 
-        // If ID provided, return single trip with status history
+        // If ID provided, return single trip with optional history
         if (id) {
             if (!ObjectId.isValid(id)) {
                 return NextResponse.json(
@@ -1087,7 +1211,6 @@ export async function GET(request) {
                 _id: new ObjectId(id),
                 isDeleted: { $ne: true }
             })
-
             if (!trip) {
                 return NextResponse.json(
                     { success: false, message: 'Trip not found' },
@@ -1096,13 +1219,12 @@ export async function GET(request) {
             }
 
             // Get status history if requested
-            if (searchParams.get('withHistory') === 'true') {
+            if (withHistory) {
                 const history = await db
                     .collection(TRIP_STATUS_HISTORY_COLLECTION)
                     .find({ tripId: new ObjectId(id) })
                     .sort({ changedAt: -1 })
                     .toArray()
-
                 return NextResponse.json(
                     {
                         success: true,
@@ -1121,19 +1243,107 @@ export async function GET(request) {
             )
         }
 
-        // Otherwise return all trips
+        // Build filter object for multiple trips
+        let filter = { isDeleted: { $ne: true } }
+
+        // Filter by vehicle number (exact match)
+        if (vehicleNo) {
+            filter.vehicleNo = vehicleNo
+        }
+
+        // Filter by trip status
+        if (tripStatus) {
+            // Handle multiple statuses if comma-separated
+            if (tripStatus.includes(',')) {
+                const statuses = tripStatus.split(',').map(s => s.trim())
+                filter.tripStatus = { $in: statuses }
+            } else {
+                filter.tripStatus = tripStatus
+            }
+        }
+
+        // Filter by date range
+        if (fromDate || toDate) {
+            filter.tripDate = {}
+            if (fromDate) {
+                filter.tripDate.$gte = fromDate
+            }
+            if (toDate) {
+                filter.tripDate.$lte = toDate
+            }
+        }
+
+        // Filter by driver name (partial match)
+        const driverName = searchParams.get('driverName')
+        if (driverName) {
+            filter.driverName = { $regex: driverName, $options: 'i' }
+        }
+
+        // Filter by from/to locations (partial match)
+        const fromLocation = searchParams.get('fromLocation')
+        if (fromLocation) {
+            filter.fromLocation = { $regex: fromLocation, $options: 'i' }
+        }
+
+        const toLocation = searchParams.get('toLocation')
+        if (toLocation) {
+            filter.toLocation = { $regex: toLocation, $options: 'i' }
+        }
+
+        // Filter by LHS number (partial match)
+        const lhsNo = searchParams.get('lhsNo')
+        if (lhsNo) {
+            filter.lhsNo = { $regex: lhsNo, $options: 'i' }
+        }
+
+        console.log('GET trips filter:', JSON.stringify(filter, null, 2)) // Debug log
+
         const db = await getDB()
+
+        // Get pagination parameters
+        const page = parseInt(searchParams.get('page') || '1')
+        const limit = parseInt(searchParams.get('limit') || '50')
+        const skip = (page - 1) * limit
+
+        // Get sort parameters
+        const sortField = searchParams.get('sortField') || 'tripDate'
+        const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1
+        let sort = { [sortField]: sortOrder, createdAt: -1 }
+
+        // Execute query with pagination
         const trips = await db
             .collection(TRIPS_COLLECTION)
-            .find({ isDeleted: { $ne: true } })
-            .sort({ tripDate: -1, createdAt: -1 })
+            .find(filter)
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
             .toArray()
+
+        // Get total count for pagination
+        const totalCount = await db
+            .collection(TRIPS_COLLECTION)
+            .countDocuments(filter)
 
         return NextResponse.json({
             success: true,
             data: trips,
-            count: trips.length
+            count: trips.length,
+            totalCount: totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+            filters: {
+                vehicleNo: vehicleNo || null,
+                tripStatus: tripStatus || null,
+                fromDate: fromDate || null,
+                toDate: toDate || null,
+                driverName: driverName || null,
+                fromLocation: fromLocation || null,
+                toLocation: toLocation || null,
+                lhsNo: lhsNo || null
+            }
         })
+
     } catch (error) {
         console.error('GET trips error:', error)
         return NextResponse.json(
@@ -1146,7 +1356,6 @@ export async function GET(request) {
         )
     }
 }
-
 /* ================= POST - CREATE TRIP ================= */
 export const POST = checkPermission(PERMISSIONS.marketTrips.CREATE)(
     async function POST(req) {

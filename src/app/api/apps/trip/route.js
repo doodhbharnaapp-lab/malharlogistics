@@ -636,7 +636,6 @@
 //         )
 //     }
 // }
-
 // app/api/apps/trips/route.js
 import { NextResponse } from 'next/server'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -644,16 +643,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/libs/auth'
 import { PERMISSIONS } from '@/libs/permissions'
 import { checkPermission, checkAnyPermission } from '@/utils/checkPermission'
-
 const TRIPS_COLLECTION = 'trips'
 const TRIP_STATUS_HISTORY_COLLECTION = 'trip_status_history'
-
 const client = new MongoClient(process.env.DATABASE_URL)
 async function getDB() {
     await client.connect()
     return client.db()
 }
-
 /* ================= STATUS CHANGE HELPER ================= */
 async function recordStatusChange(db, tripId, oldStatus, newStatus, remarks, changedBy = 'system') {
     if (!remarks || !remarks.trim()) {
@@ -676,8 +672,114 @@ async function recordStatusChange(db, tripId, oldStatus, newStatus, remarks, cha
         return { success: false, error: error.message }
     }
 }
-
 /* ================= GET STATUS HISTORY ================= */
+// export async function GET(request) {
+//     try {
+//         const session = await getServerSession(authOptions)
+//         if (!session) {
+//             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+//         }
+//         // ✅ CHECK PERMISSION - trips:read
+//         const hasPermission = await checkAnyPermission([
+//             PERMISSIONS.trips.READ,
+//             PERMISSIONS.trips.CREATE,
+//             PERMISSIONS.trips.WRITE
+//         ])(async () => true)(request)
+//         if (!hasPermission && session.user.role !== 'admin') {
+//             return NextResponse.json({
+//                 error: 'Forbidden',
+//                 message: 'You need trips:read permission'
+//             }, { status: 403 })
+//         }
+//         const { searchParams } = new URL(request.url)
+//         const id = searchParams.get('id')
+//         const getHistory = searchParams.get('history') === 'true'
+//         // Get status history for a specific trip
+//         if (getHistory && id) {
+//             if (!ObjectId.isValid(id)) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Invalid ID' },
+//                     { status: 400 }
+//                 )
+//             }
+//             const db = await getDB()
+//             const history = await db
+//                 .collection(TRIP_STATUS_HISTORY_COLLECTION)
+//                 .find({ tripId: new ObjectId(id) })
+//                 .sort({ changedAt: -1 })
+//                 .toArray()
+//             return NextResponse.json({
+//                 success: true,
+//                 data: history,
+//                 count: history.length
+//             })
+//         }
+//         // If ID provided, return single trip with status history
+//         if (id) {
+//             if (!ObjectId.isValid(id)) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Invalid ID' },
+//                     { status: 400 }
+//                 )
+//             }
+//             const db = await getDB()
+//             const trip = await db.collection(TRIPS_COLLECTION).findOne({
+//                 _id: new ObjectId(id),
+//                 isDeleted: { $ne: true }
+//             })
+//             if (!trip) {
+//                 return NextResponse.json(
+//                     { success: false, message: 'Trip not found' },
+//                     { status: 404 }
+//                 )
+//             }
+//             // Get status history if requested
+//             if (searchParams.get('withHistory') === 'true') {
+//                 const history = await db
+//                     .collection(TRIP_STATUS_HISTORY_COLLECTION)
+//                     .find({ tripId: new ObjectId(id) })
+//                     .sort({ changedAt: -1 })
+//                     .toArray()
+//                 return NextResponse.json(
+//                     {
+//                         success: true,
+//                         data: {
+//                             ...trip,
+//                             statusHistory: history
+//                         }
+//                     },
+//                     { status: 200 }
+//                 )
+//             }
+//             return NextResponse.json(
+//                 { success: true, data: trip },
+//                 { status: 200 }
+//             )
+//         }
+//         // Otherwise return all trips
+//         const db = await getDB()
+//         const trips = await db
+//             .collection(TRIPS_COLLECTION)
+//             .find({ isDeleted: { $ne: true } })
+//             .sort({ tripDate: -1, createdAt: -1 })
+//             .toArray()
+//         return NextResponse.json({
+//             success: true,
+//             data: trips,
+//             count: trips.length
+//         })
+//     } catch (error) {
+//         console.error('GET trips error:', error)
+//         return NextResponse.json(
+//             {
+//                 success: false,
+//                 error: error.message,
+//                 message: 'Failed to fetch trips'
+//             },
+//             { status: 500 }
+//         )
+//     }
+// }
 export async function GET(request) {
     try {
         const session = await getServerSession(authOptions)
@@ -702,6 +804,11 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
         const getHistory = searchParams.get('history') === 'true'
+        const vehicleNo = searchParams.get('vehicleNo')
+        const tripStatus = searchParams.get('status')
+        const fromDate = searchParams.get('fromDate')
+        const toDate = searchParams.get('toDate')
+        const withHistory = searchParams.get('withHistory') === 'true'
 
         // Get status history for a specific trip
         if (getHistory && id) {
@@ -717,7 +824,6 @@ export async function GET(request) {
                 .find({ tripId: new ObjectId(id) })
                 .sort({ changedAt: -1 })
                 .toArray()
-
             return NextResponse.json({
                 success: true,
                 data: history,
@@ -725,7 +831,7 @@ export async function GET(request) {
             })
         }
 
-        // If ID provided, return single trip with status history
+        // If ID provided, return single trip with optional history
         if (id) {
             if (!ObjectId.isValid(id)) {
                 return NextResponse.json(
@@ -738,7 +844,6 @@ export async function GET(request) {
                 _id: new ObjectId(id),
                 isDeleted: { $ne: true }
             })
-
             if (!trip) {
                 return NextResponse.json(
                     { success: false, message: 'Trip not found' },
@@ -747,13 +852,12 @@ export async function GET(request) {
             }
 
             // Get status history if requested
-            if (searchParams.get('withHistory') === 'true') {
+            if (withHistory) {
                 const history = await db
                     .collection(TRIP_STATUS_HISTORY_COLLECTION)
                     .find({ tripId: new ObjectId(id) })
                     .sort({ changedAt: -1 })
                     .toArray()
-
                 return NextResponse.json(
                     {
                         success: true,
@@ -772,19 +876,107 @@ export async function GET(request) {
             )
         }
 
-        // Otherwise return all trips
+        // Build filter object for multiple trips
+        let filter = { isDeleted: { $ne: true } }
+
+        // Filter by vehicle number (exact match)
+        if (vehicleNo) {
+            filter.vehicleNo = vehicleNo
+        }
+
+        // Filter by trip status
+        if (tripStatus) {
+            // Handle multiple statuses if comma-separated
+            if (tripStatus.includes(',')) {
+                const statuses = tripStatus.split(',').map(s => s.trim())
+                filter.tripStatus = { $in: statuses }
+            } else {
+                filter.tripStatus = tripStatus
+            }
+        }
+
+        // Filter by date range
+        if (fromDate || toDate) {
+            filter.tripDate = {}
+            if (fromDate) {
+                filter.tripDate.$gte = fromDate
+            }
+            if (toDate) {
+                filter.tripDate.$lte = toDate
+            }
+        }
+
+        // Filter by driver name (partial match)
+        const driverName = searchParams.get('driverName')
+        if (driverName) {
+            filter.driverName = { $regex: driverName, $options: 'i' }
+        }
+
+        // Filter by from/to locations (partial match)
+        const fromLocation = searchParams.get('fromLocation')
+        if (fromLocation) {
+            filter.fromLocation = { $regex: fromLocation, $options: 'i' }
+        }
+
+        const toLocation = searchParams.get('toLocation')
+        if (toLocation) {
+            filter.toLocation = { $regex: toLocation, $options: 'i' }
+        }
+
+        // Filter by LHS number (partial match)
+        const lhsNo = searchParams.get('lhsNo')
+        if (lhsNo) {
+            filter.lhsNo = { $regex: lhsNo, $options: 'i' }
+        }
+
+        console.log('GET trips filter:', JSON.stringify(filter, null, 2)) // Debug log
+
         const db = await getDB()
+
+        // Get pagination parameters
+        const page = parseInt(searchParams.get('page') || '1')
+        const limit = parseInt(searchParams.get('limit') || '50')
+        const skip = (page - 1) * limit
+
+        // Get sort parameters
+        const sortField = searchParams.get('sortField') || 'tripDate'
+        const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1
+        let sort = { [sortField]: sortOrder, createdAt: -1 }
+
+        // Execute query with pagination
         const trips = await db
             .collection(TRIPS_COLLECTION)
-            .find({ isDeleted: { $ne: true } })
-            .sort({ tripDate: -1, createdAt: -1 })
+            .find(filter)
+            .sort(sort)
+            .skip(skip)
+            .limit(limit)
             .toArray()
+
+        // Get total count for pagination
+        const totalCount = await db
+            .collection(TRIPS_COLLECTION)
+            .countDocuments(filter)
 
         return NextResponse.json({
             success: true,
             data: trips,
-            count: trips.length
+            count: trips.length,
+            totalCount: totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+            filters: {
+                vehicleNo: vehicleNo || null,
+                tripStatus: tripStatus || null,
+                fromDate: fromDate || null,
+                toDate: toDate || null,
+                driverName: driverName || null,
+                fromLocation: fromLocation || null,
+                toLocation: toLocation || null,
+                lhsNo: lhsNo || null
+            }
         })
+
     } catch (error) {
         console.error('GET trips error:', error)
         return NextResponse.json(
@@ -797,7 +989,6 @@ export async function GET(request) {
         )
     }
 }
-
 /* ================= POST - CREATE TRIP ================= */
 export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
     async function POST(req) {
@@ -828,7 +1019,6 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                 distanceKm,
                 selectedRoute
             } = await req.json()
-
             // Validate required fields
             if (!vehicleNo || !driverName || !fromLocation || !toLocation) {
                 return NextResponse.json(
@@ -839,26 +1029,21 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
-
             // Calculate total diesel amount if not provided
             let calculatedDieselAmount = totalDieselAmount
             if (!calculatedDieselAmount && dieselLtr && dieselRate) {
                 calculatedDieselAmount = (parseFloat(dieselLtr) * parseFloat(dieselRate)).toFixed(2)
             }
-
             // Get routeCode from either direct field or selectedRoute object
             const finalRouteCode = routeCode || (selectedRoute?.routeCode) || '';
             const finalDistanceKm = distanceKm || (selectedRoute?.distanceKm) || 0;
-
             // Check 1: Check if trip already exists for the same vehicle and date (active or not)
             const existingTripOnDate = await db.collection(TRIPS_COLLECTION).findOne({
                 vehicleNo: vehicleNo.trim(),
                 tripDate: tripDate || new Date().toISOString().split('T')[0],
                 isDeleted: { $ne: true }
             })
-
             if (existingTripOnDate) {
                 return NextResponse.json(
                     {
@@ -869,14 +1054,12 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                     { status: 409 }
                 )
             }
-
             // Check 2: Count ONLY ACTIVE trips for this vehicle (not closed/cancelled)
             const activeTripsForVehicle = await db.collection(TRIPS_COLLECTION).countDocuments({
                 vehicleNo: vehicleNo.trim(),
                 tripStatus: 'active',  // Only count active trips
                 isDeleted: { $ne: true }
             })
-
             if (activeTripsForVehicle >= 2) {
                 return NextResponse.json(
                     {
@@ -887,7 +1070,6 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                     { status: 409 }
                 )
             }
-
             const payload = {
                 vehicleNo: vehicleNo.trim(),
                 driverName: driverName.trim(),
@@ -916,9 +1098,7 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                 updatedAt: new Date(),
                 createdBy: session.user.id
             }
-
             const result = await db.collection(TRIPS_COLLECTION).insertOne(payload)
-
             // Record initial status change if remarks provided
             if (initialRemarks && initialRemarks.trim()) {
                 await recordStatusChange(
@@ -930,7 +1110,6 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
                     'system'
                 )
             }
-
             return NextResponse.json(
                 {
                     success: true,
@@ -955,7 +1134,6 @@ export const POST = checkPermission(PERMISSIONS.trips.CREATE)(
         }
     }
 )
-
 /* ================= PUT - UPDATE TRIP ================= */
 export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
     async function PUT(req) {
@@ -990,9 +1168,7 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                 ids,
                 updateData
             } = await req.json()
-
             const db = await getDB()
-
             // ✅ CHECK FOR BULK OPERATION
             if (ids && Array.isArray(ids) && ids.length > 0) {
                 // Check bulk permission
@@ -1000,7 +1176,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     const hasBulkPermission = await checkAnyPermission([
                         PERMISSIONS.trips.BULK_UPDATE
                     ])(async () => true)(req)
-
                     if (!hasBulkPermission) {
                         return NextResponse.json({
                             error: 'Forbidden',
@@ -1008,7 +1183,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                         }, { status: 403 })
                     }
                 }
-
                 const objectIds = ids.map(id => new ObjectId(id))
                 const result = await db.collection(TRIPS_COLLECTION).updateMany(
                     { _id: { $in: objectIds } },
@@ -1020,13 +1194,11 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                         }
                     }
                 )
-
                 return NextResponse.json({
                     success: true,
                     message: `${result.modifiedCount} trips updated successfully`
                 })
             }
-
             // SINGLE TRIP UPDATE
             if (!id) {
                 return NextResponse.json(
@@ -1034,20 +1206,17 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     { status: 400 }
                 )
             }
-
             // Check if trip exists
             const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
                 _id: new ObjectId(id),
                 isDeleted: { $ne: true }
             })
-
             if (!existingTrip) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             // Calculate total diesel amount
             let calculatedDieselAmount = totalDieselAmount
             if (!calculatedDieselAmount) {
@@ -1057,10 +1226,8 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     calculatedDieselAmount = (parseFloat(finalDieselLtr) * parseFloat(finalDieselRate)).toFixed(2)
                 }
             }
-
             // Determine if status is changing
             const isStatusChanging = tripStatus !== undefined && tripStatus !== existingTrip.tripStatus
-
             // Validate remarks if status is changing
             if (isStatusChanging) {
                 if (!statusRemarks || !statusRemarks.trim()) {
@@ -1074,7 +1241,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     )
                 }
             }
-
             // Get final routeCode from either direct field or selectedRoute object
             let finalRouteCode = existingTrip.routeCode;
             let finalDistanceKm = existingTrip.distanceKm;
@@ -1088,7 +1254,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
             } else if (selectedRoute?.distanceKm) {
                 finalDistanceKm = selectedRoute.distanceKm;
             }
-
             // Prepare update data
             const updateFields = {
                 ...(vehicleNo !== undefined && { vehicleNo: vehicleNo.trim() }),
@@ -1117,12 +1282,10 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                 updatedAt: new Date(),
                 updatedBy: session.user.id
             }
-
             // Check for duplicate trip (if vehicleNo or tripDate changed)
             if (vehicleNo || tripDate) {
                 const checkVehicleNo = vehicleNo || existingTrip.vehicleNo
                 const checkTripDate = tripDate || existingTrip.tripDate
-
                 // Check 1: No duplicate on same date
                 const duplicateTrip = await db.collection(TRIPS_COLLECTION).findOne({
                     vehicleNo: checkVehicleNo,
@@ -1130,7 +1293,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     _id: { $ne: new ObjectId(id) },
                     isDeleted: { $ne: true }
                 })
-
                 if (duplicateTrip) {
                     return NextResponse.json(
                         {
@@ -1141,7 +1303,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                         { status: 409 }
                     )
                 }
-
                 // Check 2: If vehicle is being changed, ensure it doesn't exceed 2 trips
                 if (vehicleNo && vehicleNo !== existingTrip.vehicleNo) {
                     const totalTripsForNewVehicle = await db.collection(TRIPS_COLLECTION).countDocuments({
@@ -1149,7 +1310,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                         _id: { $ne: new ObjectId(id) },
                         isDeleted: { $ne: true }
                     })
-
                     if (totalTripsForNewVehicle >= 2) {
                         return NextResponse.json(
                             {
@@ -1162,7 +1322,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     }
                 }
             }
-
             // Record status change if status is being updated
             if (isStatusChanging) {
                 const statusChangeResult = await recordStatusChange(
@@ -1173,7 +1332,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     statusRemarks.trim(),
                     'user'
                 )
-
                 if (!statusChangeResult.success) {
                     return NextResponse.json(
                         {
@@ -1183,7 +1341,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                         { status: 500 }
                     )
                 }
-
                 // Also update statusChangedAt if provided
                 if (statusChangedAt) {
                     updateFields.statusChangedAt = new Date(statusChangedAt)
@@ -1191,19 +1348,16 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
                     updateFields.statusChangedAt = new Date()
                 }
             }
-
             const result = await db.collection(TRIPS_COLLECTION).updateOne(
                 { _id: new ObjectId(id) },
                 { $set: updateFields }
             )
-
             if (result.matchedCount === 0) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             return NextResponse.json({
                 success: true,
                 message: 'Trip updated successfully',
@@ -1225,7 +1379,6 @@ export const PUT = checkPermission(PERMISSIONS.trips.WRITE)(
         }
     }
 )
-
 /* ================= PATCH - UPDATE TRIP STATUS ONLY (with remarks) ================= */
 export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
     async function PATCH(req) {
@@ -1238,21 +1391,18 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
                 statusChangedAt,
                 changedBy
             } = await req.json()
-
             if (!id) {
                 return NextResponse.json(
                     { success: false, error: 'ID is required' },
                     { status: 400 }
                 )
             }
-
             if (!tripStatus) {
                 return NextResponse.json(
                     { success: false, error: 'Trip status is required' },
                     { status: 400 }
                 )
             }
-
             if (!statusRemarks || !statusRemarks.trim()) {
                 return NextResponse.json(
                     {
@@ -1263,22 +1413,18 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
-
             // Check if trip exists
             const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
                 _id: new ObjectId(id),
                 isDeleted: { $ne: true }
             })
-
             if (!existingTrip) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             // Record status change
             const statusChangeResult = await recordStatusChange(
                 db,
@@ -1288,7 +1434,6 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
                 statusRemarks.trim(),
                 changedBy || session.user.id
             )
-
             if (!statusChangeResult.success) {
                 return NextResponse.json(
                     {
@@ -1298,7 +1443,6 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
                     { status: 500 }
                 )
             }
-
             // Update trip status
             const updateData = {
                 tripStatus: tripStatus.trim(),
@@ -1307,24 +1451,20 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
                 updatedAt: new Date(),
                 updatedBy: session.user.id
             }
-
             const result = await db.collection(TRIPS_COLLECTION).updateOne(
                 { _id: new ObjectId(id) },
                 { $set: updateData }
             )
-
             if (result.matchedCount === 0) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             // Get updated trip
             const updatedTrip = await db.collection(TRIPS_COLLECTION).findOne({
                 _id: new ObjectId(id)
             })
-
             return NextResponse.json({
                 success: true,
                 message: 'Trip status updated successfully',
@@ -1344,36 +1484,30 @@ export const PATCH = checkPermission(PERMISSIONS.trips.WRITE)(
         }
     }
 )
-
 /* ================= DELETE TRIP (SOFT DELETE) ================= */
 export const DELETE = checkPermission(PERMISSIONS.trips.DELETE)(
     async function DELETE(req) {
         try {
             const session = await getServerSession(authOptions)
             const { id } = await req.json()
-
             if (!id) {
                 return NextResponse.json(
                     { success: false, error: 'ID is required' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
-
             // Check if trip exists
             const existingTrip = await db.collection(TRIPS_COLLECTION).findOne({
                 _id: new ObjectId(id),
                 isDeleted: { $ne: true }
             })
-
             if (!existingTrip) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             // Record delete action in status history
             await recordStatusChange(
                 db,
@@ -1383,7 +1517,6 @@ export const DELETE = checkPermission(PERMISSIONS.trips.DELETE)(
                 'Trip deleted by user',
                 session.user.id
             )
-
             // Soft delete
             const result = await db.collection(TRIPS_COLLECTION).updateOne(
                 { _id: new ObjectId(id) },
@@ -1396,14 +1529,12 @@ export const DELETE = checkPermission(PERMISSIONS.trips.DELETE)(
                     }
                 }
             )
-
             if (result.matchedCount === 0) {
                 return NextResponse.json(
                     { success: false, error: 'Trip not found' },
                     { status: 404 }
                 )
             }
-
             return NextResponse.json({
                 success: true,
                 message: 'Trip deleted successfully'
@@ -1421,24 +1552,20 @@ export const DELETE = checkPermission(PERMISSIONS.trips.DELETE)(
         }
     }
 )
-
 /* ================= BULK DELETE TRIPS ================= */
 export const POST_BULK_DELETE = checkPermission(PERMISSIONS.trips.BULK_DELETE)(
     async function POST_BULK_DELETE(req) {
         try {
             const session = await getServerSession(authOptions)
             const { ids } = await req.json()
-
             if (!ids || !Array.isArray(ids) || ids.length === 0) {
                 return NextResponse.json(
                     { success: false, error: 'Trip IDs are required' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
             const objectIds = ids.map(id => new ObjectId(id))
-
             const result = await db.collection(TRIPS_COLLECTION).updateMany(
                 { _id: { $in: objectIds } },
                 {
@@ -1450,7 +1577,6 @@ export const POST_BULK_DELETE = checkPermission(PERMISSIONS.trips.BULK_DELETE)(
                     }
                 }
             )
-
             return NextResponse.json({
                 success: true,
                 message: `${result.modifiedCount} trips deleted successfully`
@@ -1468,43 +1594,36 @@ export const POST_BULK_DELETE = checkPermission(PERMISSIONS.trips.BULK_DELETE)(
         }
     }
 )
-
 /* ================= BULK STATUS UPDATE ================= */
 export const POST_BULK_STATUS = checkPermission(PERMISSIONS.trips.BULK_STATUS)(
     async function POST_BULK_STATUS(req) {
         try {
             const session = await getServerSession(authOptions)
             const { ids, tripStatus, statusRemarks } = await req.json()
-
             if (!ids || !Array.isArray(ids) || ids.length === 0) {
                 return NextResponse.json(
                     { success: false, error: 'Trip IDs are required' },
                     { status: 400 }
                 )
             }
-
             if (!tripStatus) {
                 return NextResponse.json(
                     { success: false, error: 'Trip status is required' },
                     { status: 400 }
                 )
             }
-
             if (!statusRemarks || !statusRemarks.trim()) {
                 return NextResponse.json(
                     { success: false, error: 'Remarks are required for status change' },
                     { status: 400 }
                 )
             }
-
             const db = await getDB()
             const objectIds = ids.map(id => new ObjectId(id))
-
             // Get all trips to record status changes
             const trips = await db.collection(TRIPS_COLLECTION)
                 .find({ _id: { $in: objectIds } })
                 .toArray()
-
             // Record status changes for each trip
             for (const trip of trips) {
                 await recordStatusChange(
@@ -1516,7 +1635,6 @@ export const POST_BULK_STATUS = checkPermission(PERMISSIONS.trips.BULK_STATUS)(
                     session.user.id
                 )
             }
-
             // Update all trips
             const result = await db.collection(TRIPS_COLLECTION).updateMany(
                 { _id: { $in: objectIds } },
@@ -1530,7 +1648,6 @@ export const POST_BULK_STATUS = checkPermission(PERMISSIONS.trips.BULK_STATUS)(
                     }
                 }
             )
-
             return NextResponse.json({
                 success: true,
                 message: `${result.modifiedCount} trips status updated successfully`
