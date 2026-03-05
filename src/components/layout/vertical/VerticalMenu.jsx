@@ -456,6 +456,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         {/* ACCOUNT1 - Trip, Advance, Market Trip, Market Advance, Reports */}
         {userRole === 'account1' && (
           <>
+            <SubMenu label="vehicles" icon={<i className='ri-car-line' />}>
+              <MenuItem href={`/${locale}/apps/vehicles/list`}>{dictionary['navigation'].list}</MenuItem>
+              <MenuItem href={`/${locale}/apps/vehicles/types`}>{'Types'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/vehicles/vehicle-owners/list`}>
+                {'Vehicle Owners'}
+              </MenuItem>
+              <MenuItem href={`/${locale}/apps/vehicles/market`}>{'Market Vehicles'}</MenuItem>
+            </SubMenu>
             {/* Trips with all options */}
             <SubMenu label="Trips" icon={<i className='ri-file-copy-line' />}>
               <MenuItem href={`/${locale}/apps/trip/`}>{dictionary['navigation'].list}</MenuItem>
@@ -470,6 +478,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               <MenuItem href={`/${locale}/apps/trip/advance/reports`}>{'Advance Report'}</MenuItem>
               <MenuItem href={`/${locale}/apps/trip/report/market`}>{'Market Trip Report'}</MenuItem>
               <MenuItem href={`/${locale}/apps/trip/advance/reports/market`}>{'Market Advance Report'}</MenuItem>
+            </SubMenu>
+            <SubMenu label="Location" icon={<i className='ri-map-pin-fill' />}>
+              <MenuItem href={`/${locale}/apps/location/`}>{'Location'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/location/info`}>{'Location Info'}</MenuItem>
             </SubMenu>
           </>
         )}
