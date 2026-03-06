@@ -3246,7 +3246,7 @@ const AdvanceRegister = () => {
                     formatAmount(latestUnpaidAdvance), // Advance (Unpaid)
                     formatAmount(balance), // Balance
                     trip.ifscCode || 'N/A', // IFSC Code
-                    formattedAccountNo, // Account No
+                    trip.accountNo, // Account No
                     trip.bankName || 'N/A', // Bank Name
                     trip.accountHolderName || 'N/A', // Account Holder Name
                     latestRemark.substring(0, 50) // Remark (truncate if too long)
@@ -3492,14 +3492,12 @@ const AdvanceRegister = () => {
                 })
             }
             // Financial summary in two columns
-            doc.setFontSize(9)
+            doc.setFontSize(12)
             doc.setFont('helvetica', 'normal')
             // Left column
             doc.text(
                 [
-                    `Total Trips: ${filteredRows.length}`,
                     `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
-                    `Total Paid: ${formatCurrency(totalPaidSum)}`
                 ],
                 10,
                 finalY + 25
@@ -3507,9 +3505,7 @@ const AdvanceRegister = () => {
             // Right column
             doc.text(
                 [
-                    `Total Unpaid: ${formatCurrency(totalUnpaidSum)}`,
                     `Total Balance: ${formatCurrency(totalBalanceSum)}`,
-                    `Report Date: ${currentDate}`
                 ],
                 doc.internal.pageSize.width / 2,
                 finalY + 25
@@ -3521,11 +3517,7 @@ const AdvanceRegister = () => {
             doc.setFont('helvetica', 'italic')
             doc.setTextColor(108, 117, 125)
             doc.setFontSize(8)
-            doc.text(
-                `Status: Active: ${activeTrips} | Completed: ${completedTrips} | Other: ${otherStatusTrips}`,
-                10,
-                finalY + 35
-            )
+
             // Save the PDF
             const fileName = `Advance_Register_${new Date().toISOString().split('T')[0]}.pdf`
             doc.save(fileName)
@@ -4135,100 +4127,124 @@ const AdvanceRegister = () => {
                         ) : (
                             /* ================= PROCEED ADVANCES SECTION ================= */
                             <>
-                                <div className='flex justify-between items-center mt-4'>
-                                    <Typography variant='h5'>Proceed Advances</Typography>
-                                    <div className='flex gap-2 items-center'>
-                                        <Button
-                                            variant='contained'
-                                            onClick={fetchTodayAdvances}
-                                            disabled={proceedLoading || bulkProcessing}
-                                            startIcon={proceedLoading && <CircularProgress size={16} />}
-                                        >
-                                            Refresh
-                                        </Button>
-                                        <Button
-                                            variant='contained'
-                                            color='secondary'
-                                            onClick={bulkProceedSelectedDateAdvances}
-                                            disabled={proceedLoading || bulkProcessing || !selectedDate}
-                                            startIcon={
-                                                bulkProcessing ? <CircularProgress size={16} /> : <i className='ri-check-double-line' />
-                                            }
-                                        >
-                                            {bulkProcessing ? 'Processing...' : 'Proceed Advances'}
-                                        </Button>
-                                        <Button
-                                            variant='outlined'
-                                            onClick={exportToPDF}
-                                            disabled={loading || rows.length === 0}
-                                            startIcon={<i className='ri-file-download-line' />}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            Export PDF
-                                        </Button>
+                                {/* ================= PROCEED ADVANCES SECTION ================= */}
+                                <>
+                                    <div className='flex justify-between items-center mt-4'>
+                                        <Typography variant='h5'>Proceed Advances</Typography>
+                                        <div className='flex gap-2 items-center'>
+                                            <Button
+                                                variant='contained'
+                                                onClick={fetchTodayAdvances}
+                                                disabled={proceedLoading || bulkProcessing}
+                                                startIcon={proceedLoading && <CircularProgress size={16} />}
+                                            >
+                                                Refresh
+                                            </Button>
+                                            <Button
+                                                variant='contained'
+                                                color='secondary'
+                                                onClick={bulkProceedSelectedDateAdvances}
+                                                disabled={proceedLoading || bulkProcessing || !selectedDate}
+                                                startIcon={
+                                                    bulkProcessing ? <CircularProgress size={16} /> : <i className='ri-check-double-line' />
+                                                }
+                                            >
+                                                {bulkProcessing ? 'Processing...' : 'Proceed Advances'}
+                                            </Button>
+                                            <Button
+                                                variant='outlined'
+                                                onClick={exportToPDF}
+                                                disabled={loading || rows.length === 0}
+                                                startIcon={<i className='ri-file-download-line' />}
+                                                sx={{ ml: 1 }}
+                                            >
+                                                Export PDF
+                                            </Button>
+                                        </div>
                                     </div>
-                                </div>
-                                {proceedLoading ? (
-                                    <div className='flex justify-center p-8'>
-                                        <CircularProgress />
-                                    </div>
-                                ) : todayAdvances.length === 0 ? (
-                                    <div className='p-8 text-center'>
-                                        <Typography color='textSecondary'>
-                                            No advances found for {selectedDate.toLocaleDateString()}
-                                        </Typography>
-                                    </div>
-                                ) : (
-                                    <Table className='mt-4'>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell><strong>Vehicle No</strong></TableCell>
-                                                <TableCell><strong>Driver</strong></TableCell>
-                                                <TableCell><strong>Advance Type</strong></TableCell>
-                                                <TableCell><strong>Amount</strong></TableCell>
-                                                <TableCell><strong>Date</strong></TableCell>
-                                                <TableCell><strong>Status</strong></TableCell>
-                                                <TableCell><strong>Action</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {todayAdvances.map((advance, index) => (
-                                                <TableRow key={advance._id || index}>
-                                                    <TableCell>{advance.vehicleNo}</TableCell>
-                                                    <TableCell>{advance.driverName || 'N/A'}</TableCell>
-                                                    <TableCell>{advance.advanceType}</TableCell>
-                                                    <TableCell>{advance.amount}</TableCell>
-                                                    <TableCell>{advance.date}</TableCell>
-                                                    <TableCell>
-                                                        <Typography
-                                                            color={advance.status === 'paid' ? 'success.main' : 'warning.main'}
-                                                            fontWeight='bold'
-                                                        >
-                                                            {advance.status === 'paid' ? 'PAID' : 'UNPAID'}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {advance.status === 'unpaid' ? (
-                                                            <Button
-                                                                variant='contained'
-                                                                color='success'
-                                                                size='small'
-                                                                onClick={() => markAdvanceAsPaid(advance._id)}
-                                                                disabled={proceedLoading}
-                                                            >
-                                                                Mark as Paid
-                                                            </Button>
-                                                        ) : (
-                                                            <Typography color='textSecondary' variant='body2'>
-                                                                Already Processed
+
+                                    {proceedLoading ? (
+                                        <div className='flex justify-center p-8'>
+                                            <CircularProgress />
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Date Picker */}
+
+
+                                            {/* Filter to show ONLY unpaid advances */}
+                                            {(() => {
+                                                // Filter advances to show only unpaid ones
+                                                const unpaidAdvances = todayAdvances.filter(advance => advance.status === 'unpaid');
+                                                const paidCount = todayAdvances.filter(advance => advance.status === 'paid').length;
+
+                                                if (unpaidAdvances.length === 0) {
+                                                    return (
+                                                        <div className='p-8 text-center'>
+                                                            <Typography color='textSecondary'>
+                                                                No unpaid advances found for {selectedDate.toLocaleDateString()}
+                                                                {paidCount > 0 && ` (${paidCount} paid advances hidden)`}
                                                             </Typography>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <>
+                                                        {/* Show summary */}
+
+
+                                                        <Table className='mt-4'>
+                                                            <TableHead>
+                                                                <TableRow>
+                                                                    <TableCell><strong>Vehicle No</strong></TableCell>
+                                                                    <TableCell><strong>Driver</strong></TableCell>
+                                                                    <TableCell><strong>Advance Type</strong></TableCell>
+                                                                    <TableCell><strong>Amount</strong></TableCell>
+                                                                    <TableCell><strong>Date</strong></TableCell>
+                                                                    <TableCell><strong>Action</strong></TableCell>
+                                                                </TableRow>
+                                                            </TableHead>
+                                                            <TableBody>
+                                                                {unpaidAdvances.map((advance, index) => (
+                                                                    <TableRow key={advance._id || index}>
+                                                                        <TableCell>{advance.vehicleNo}</TableCell>
+                                                                        <TableCell>{advance.driverName || 'N/A'}</TableCell>
+                                                                        <TableCell>{advance.advanceType}</TableCell>
+                                                                        <TableCell>{Number(advance.amount).toFixed(2)}</TableCell>
+                                                                        <TableCell>{(new Date(advance.date)).toLocaleDateString('en-IN')}</TableCell>
+                                                                        <TableCell>
+                                                                            <Button
+                                                                                variant='contained'
+                                                                                color='success'
+                                                                                size='small'
+                                                                                onClick={() => markAdvanceAsPaid(advance._id)}
+                                                                                disabled={proceedLoading}
+                                                                            >
+                                                                                Mark as Paid
+                                                                            </Button>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+
+                                                        {/* Show total amount */}
+                                                        <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+                                                            <Typography variant='subtitle1' fontWeight='bold'>
+                                                                Total Unpaid Amount:
+                                                                {unpaidAdvances
+                                                                    .reduce((sum, adv) => sum + Number(adv.amount || 0), 0)
+                                                                    .toFixed(2)}
+                                                            </Typography>
+                                                        </Box>
+                                                    </>
+                                                );
+                                            })()}
+                                        </>
+                                    )}
+                                </>
+
                             </>
                         )}
                     </CardContent>

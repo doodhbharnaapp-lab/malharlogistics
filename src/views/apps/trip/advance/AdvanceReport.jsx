@@ -309,7 +309,7 @@ const TripAdvanceReport = () => {
                 // Format account number for privacy
                 const formattedAccountNo = trip.accountNo
                     ? trip.accountNo.length > 8
-                        ? `XXXX${trip.accountNo.slice(-4)}`
+                        ? `XXXX${trip.accountNo.slice(-15)}`
                         : trip.accountNo
                     : 'N/A'
                 // Get latest remark
