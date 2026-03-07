@@ -2498,29 +2498,7 @@ const AdvanceRegister = () => {
         message: '',
         severity: 'success'
     })
-    const [trip, setTrip] = useState({
-        id: null,
-        _id: null,
-        vehicleNo: '',
-        vehicleType: '',
-        fromLocation: '',
-        toLocation: '',
-        lhsNo: '',
-        ifscCode: '',
-        bankName: '',
-        accountNo: '',
-        accountHolderName: '',
-        driverName: '',
-        driverMobile: '',
-        dieselLtr: '',
-        dieselRate: '',
-        totalDieselAmount: '',
-        totalAdvanceAmount: 0,
-        advanceAmount: 0,
-        advances: [],
-        tripStatus: '', // Add trip status
-        tripDate: '' // Add this field
-    })
+    const [trip, setTrip] = useState({ id: null, _id: null, vehicleNo: '', vehicleType: '', fromLocation: '', toLocation: '', lhsNo: '', ifscCode: '', bankName: '', accountNo: '', accountHolderName: '', driverName: '', driverMobile: '', dieselLtr: '', dieselRate: '', totalDieselAmount: '', totalAdvanceAmount: 0, advanceAmount: 0, advances: [], tripStatus: '', tripDate: '' })
     const [advanceForm, setAdvanceForm] = useState({
         advanceType: '',
         amount: '',
@@ -2906,99 +2884,160 @@ const AdvanceRegister = () => {
         })
         setOpen(true)
     }
+    // const openEdit = async row => {
+    //     try {
+    //         if (!row._id && !row.id) {
+    //             showSnackbar('Trip ID is required', 'error')
+    //             return
+    //         }
+    //         const tripId = row._id || row.id
+    //         console.log('Opening trip:', {
+    //             vehicleNo: row.vehicleNo,
+    //             tripId,
+    //             tripDate: row.tripDate,
+    //             status: row.tripStatus
+    //         })
+    //         // Fetch the complete trip details first
+    //         const tripResponse = await fetch(`${TRIPS_API}?id=${tripId}`)
+    //         const tripResult = await tripResponse.json()
+    //         if (!tripResult.success || !tripResult.data) {
+    //             showSnackbar('Trip not found', 'error')
+    //             return
+    //         }
+    //         const tripData = Array.isArray(tripResult.data) ? tripResult.data[0] : tripResult.data
+    //         const tripStatus = (tripData.tripStatus || '').toLowerCase()
+    //         const tripDate = tripData.tripDate || tripData.createdAt
+    //         // Check if trip is active (strict check)
+    //         if (tripStatus !== 'active') {
+    //             showSnackbar(`Cannot manage advances for trip with status: ${tripData.tripStatus}`, 'error')
+    //             return
+    //         }
+    //         // CRITICAL CHECK: Check for OTHER active trips with date priority
+    //         console.log('Checking overlapping trips for:', tripData.vehicleNo, tripId)
+    //         const overlapCheck = await checkForOverlappingTrips(tripData.vehicleNo, tripId, tripDate)
+    //         console.log('Overlap check result:', overlapCheck)
+    //         if (overlapCheck.hasOverlapping) {
+    //             // Show which earlier trip is blocking
+    //             const blockingTrip = overlapCheck.earliestTrip
+    //             const blockingDate = new Date(blockingTrip.tripDate || blockingTrip.createdAt).toLocaleDateString()
+    //             console.log('Blocking trip details:', {
+    //                 blockingTripId: blockingTrip._id || blockingTrip.id,
+    //                 currentTripId: tripId,
+    //                 blockingVehicle: blockingTrip.vehicleNo,
+    //                 blockingFrom: blockingTrip.fromLocation,
+    //                 blockingTo: blockingTrip.toLocation
+    //             })
+    //             showSnackbar(
+    //                 `Cannot manage this trip. Vehicle ${tripData.vehicleNo} has an EARLIER active trip from ${blockingDate} (${blockingTrip.fromLocation || ''} → ${blockingTrip.toLocation || ''}).\n\nPlease complete or cancel that trip first.`,
+    //                 'error',
+    //                 10000
+    //             )
+    //             return
+    //         }
+    //         // If validation passes, fetch the trip with advances
+    //         const data = await fetchTripWithAdvances(tripId)
+    //         if (data) {
+    //             const {
+    //                 trip: tripDetail,
+    //                 advances,
+    //                 totalPaid,
+    //                 totalProposed,
+    //                 balance: tripBalance,
+    //                 availableBalance: availBalance
+    //             } = data
+    //             setTrip({
+    //                 id: tripDetail.id || null,
+    //                 _id: tripDetail._id || tripId,
+    //                 vehicleNo: tripDetail.vehicleNo || '',
+    //                 vehicleType: tripDetail.vehicleType || '',
+    //                 fromLocation: tripDetail.fromLocation || '',
+    //                 toLocation: tripDetail.toLocation || '',
+    //                 lhsNo: tripDetail.lhsNo || '',
+    //                 ifscCode: tripDetail.ifscCode || '',
+    //                 bankName: tripDetail.bankName || '',
+    //                 accountNo: tripDetail.accountNo || '',
+    //                 accountHolderName: tripDetail.accountHolderName || '',
+    //                 driverName: tripDetail.driverName || '',
+    //                 driverMobile: tripDetail.driverMobile || '',
+    //                 dieselLtr: tripDetail.dieselLtr || 0,
+    //                 dieselRate: tripDetail.dieselRate || 0,
+    //                 totalDieselAmount: tripDetail.totalDieselAmount || 0,
+    //                 totalAdvanceAmount: tripDetail.totalAdvanceAmount || 0,
+    //                 advances: advances,
+    //                 advanceAmount: tripDetail.advanceAmount || 0,
+    //                 tripStatus: tripDetail.tripStatus || '',
+    //                 totalPaid: totalPaid,
+    //                 totalProposed: totalProposed,
+    //                 balance: tripBalance,
+    //                 availableBalance: availBalance,
+    //                 tripDate: tripDetail.tripDate || ''
+    //             })
+    //             setOpen(true)
+    //         }
+    //     } catch (error) {
+    //         console.error('Error opening edit:', error)
+    //         showSnackbar('Error loading trip details', 'error')
+    //     }
+    // }
     const openEdit = async row => {
         try {
             if (!row._id && !row.id) {
                 showSnackbar('Trip ID is required', 'error')
                 return
             }
+
             const tripId = row._id || row.id
-            console.log('Opening trip:', {
-                vehicleNo: row.vehicleNo,
-                tripId,
-                tripDate: row.tripDate,
-                status: row.tripStatus
+
+            // IMMEDIATELY open modal with existing row data
+            setTrip({
+                id: row.id || null,
+                _id: tripId,
+                vehicleNo: row.vehicleNo || '',
+                vehicleType: row.vehicleType || '',
+                fromLocation: row.fromLocation || '',
+                toLocation: row.toLocation || '',
+                lhsNo: row.lhsNo || '',
+                ifscCode: row.ifscCode || '',
+                bankName: row.bankName || '',
+                accountNo: row.accountNo || '',
+                accountHolderName: row.accountHolderName || '',
+                driverName: row.driverName || '',
+                driverMobile: row.driverMobile || '',
+                dieselLtr: row.dieselLtr || 0,
+                dieselRate: row.dieselRate || 0,
+                totalDieselAmount: row.totalDieselAmount || 0,
+                totalAdvanceAmount: row.totalAdvanceAmount || 0,
+                advances: row.advances || [], // Use existing advances data
+                advanceAmount: row.advanceAmount || 0,
+                tripStatus: row.tripStatus || '',
+                totalPaid: row.totalAdvancePaid || 0,
+                totalProposed: row.totalProposed || 0,
+                balance: row.balance || 0,
+                availableBalance: row.availableBalance || 0,
+                tripDate: row.tripDate || ''
             })
-            // Fetch the complete trip details first
-            const tripResponse = await fetch(`${TRIPS_API}?id=${tripId}`)
-            const tripResult = await tripResponse.json()
-            if (!tripResult.success || !tripResult.data) {
-                showSnackbar('Trip not found', 'error')
-                return
-            }
-            const tripData = Array.isArray(tripResult.data) ? tripResult.data[0] : tripResult.data
-            const tripStatus = (tripData.tripStatus || '').toLowerCase()
-            const tripDate = tripData.tripDate || tripData.createdAt
-            // Check if trip is active (strict check)
-            if (tripStatus !== 'active') {
-                showSnackbar(`Cannot manage advances for trip with status: ${tripData.tripStatus}`, 'error')
-                return
-            }
-            // CRITICAL CHECK: Check for OTHER active trips with date priority
-            console.log('Checking overlapping trips for:', tripData.vehicleNo, tripId)
-            const overlapCheck = await checkForOverlappingTrips(tripData.vehicleNo, tripId, tripDate)
-            console.log('Overlap check result:', overlapCheck)
-            if (overlapCheck.hasOverlapping) {
-                // Show which earlier trip is blocking
-                const blockingTrip = overlapCheck.earliestTrip
-                const blockingDate = new Date(blockingTrip.tripDate || blockingTrip.createdAt).toLocaleDateString()
-                console.log('Blocking trip details:', {
-                    blockingTripId: blockingTrip._id || blockingTrip.id,
-                    currentTripId: tripId,
-                    blockingVehicle: blockingTrip.vehicleNo,
-                    blockingFrom: blockingTrip.fromLocation,
-                    blockingTo: blockingTrip.toLocation
-                })
-                showSnackbar(
-                    `Cannot manage this trip. Vehicle ${tripData.vehicleNo} has an EARLIER active trip from ${blockingDate} (${blockingTrip.fromLocation || ''} → ${blockingTrip.toLocation || ''}).\n\nPlease complete or cancel that trip first.`,
-                    'error',
-                    10000
-                )
-                return
-            }
-            // If validation passes, fetch the trip with advances
+
+            setOpen(true) // Open modal IMMEDIATELY
+
+            // Then fetch fresh data in background
+            setFormLoading(true)
             const data = await fetchTripWithAdvances(tripId)
             if (data) {
-                const {
-                    trip: tripDetail,
-                    advances,
-                    totalPaid,
-                    totalProposed,
-                    balance: tripBalance,
-                    availableBalance: availBalance
-                } = data
-                setTrip({
-                    id: tripDetail.id || null,
-                    _id: tripDetail._id || tripId,
-                    vehicleNo: tripDetail.vehicleNo || '',
-                    vehicleType: tripDetail.vehicleType || '',
-                    fromLocation: tripDetail.fromLocation || '',
-                    toLocation: tripDetail.toLocation || '',
-                    lhsNo: tripDetail.lhsNo || '',
-                    ifscCode: tripDetail.ifscCode || '',
-                    bankName: tripDetail.bankName || '',
-                    accountNo: tripDetail.accountNo || '',
-                    accountHolderName: tripDetail.accountHolderName || '',
-                    driverName: tripDetail.driverName || '',
-                    driverMobile: tripDetail.driverMobile || '',
-                    dieselLtr: tripDetail.dieselLtr || 0,
-                    dieselRate: tripDetail.dieselRate || 0,
-                    totalDieselAmount: tripDetail.totalDieselAmount || 0,
-                    totalAdvanceAmount: tripDetail.totalAdvanceAmount || 0,
-                    advances: advances,
-                    advanceAmount: tripDetail.advanceAmount || 0,
-                    tripStatus: tripDetail.tripStatus || '',
-                    totalPaid: totalPaid,
-                    totalProposed: totalProposed,
-                    balance: tripBalance,
-                    availableBalance: availBalance,
-                    tripDate: tripDetail.tripDate || ''
-                })
-                setOpen(true)
+                setTrip(prev => ({
+                    ...prev,
+                    ...data.trip,
+                    advances: data.advances,
+                    totalPaid: data.totalPaid,
+                    totalProposed: data.totalProposed,
+                    balance: data.balance,
+                    availableBalance: data.availableBalance
+                }))
             }
         } catch (error) {
             console.error('Error opening edit:', error)
             showSnackbar('Error loading trip details', 'error')
+        } finally {
+            setFormLoading(false)
         }
     }
     /* ================= ADD ADVANCE (as UNPAID) ================= */
@@ -3517,7 +3556,6 @@ const AdvanceRegister = () => {
             doc.setFont('helvetica', 'italic')
             doc.setTextColor(108, 117, 125)
             doc.setFontSize(8)
-
             // Save the PDF
             const fileName = `Advance_Register_${new Date().toISOString().split('T')[0]}.pdf`
             doc.save(fileName)
@@ -3785,18 +3823,18 @@ const AdvanceRegister = () => {
                     )
                 }
             }),
-            columnHelper.display({
-                header: 'Available',
-                cell: ({ row }) => {
-                    const available = row.original.availableBalance || 0
-                    const color = available > 0 ? 'info.main' : 'text.disabled'
-                    return (
-                        <Typography color={color} fontWeight='bold'>
-                            {available.toFixed(2)}
-                        </Typography>
-                    )
-                }
-            }),
+            // columnHelper.display({
+            //     header: 'Available',
+            //     cell: ({ row }) => {
+            //         const available = row.original.availableBalance || 0
+            //         const color = available > 0 ? 'info.main' : 'text.disabled'
+            //         return (
+            //             <Typography color={color} fontWeight='bold'>
+            //                 {available.toFixed(2)}
+            //             </Typography>
+            //         )
+            //     }
+            // }),
             columnHelper.display({
                 header: 'Status',
                 cell: ({ row }) => {
@@ -4162,7 +4200,6 @@ const AdvanceRegister = () => {
                                             </Button>
                                         </div>
                                     </div>
-
                                     {proceedLoading ? (
                                         <div className='flex justify-center p-8'>
                                             <CircularProgress />
@@ -4170,14 +4207,11 @@ const AdvanceRegister = () => {
                                     ) : (
                                         <>
                                             {/* Date Picker */}
-
-
                                             {/* Filter to show ONLY unpaid advances */}
                                             {(() => {
                                                 // Filter advances to show only unpaid ones
                                                 const unpaidAdvances = todayAdvances.filter(advance => advance.status === 'unpaid');
                                                 const paidCount = todayAdvances.filter(advance => advance.status === 'paid').length;
-
                                                 if (unpaidAdvances.length === 0) {
                                                     return (
                                                         <div className='p-8 text-center'>
@@ -4188,12 +4222,9 @@ const AdvanceRegister = () => {
                                                         </div>
                                                     );
                                                 }
-
                                                 return (
                                                     <>
                                                         {/* Show summary */}
-
-
                                                         <Table className='mt-4'>
                                                             <TableHead>
                                                                 <TableRow>
@@ -4228,7 +4259,6 @@ const AdvanceRegister = () => {
                                                                 ))}
                                                             </TableBody>
                                                         </Table>
-
                                                         {/* Show total amount */}
                                                         <Box sx={{ mt: 2, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
                                                             <Typography variant='subtitle1' fontWeight='bold'>
@@ -4244,7 +4274,6 @@ const AdvanceRegister = () => {
                                         </>
                                     )}
                                 </>
-
                             </>
                         )}
                     </CardContent>

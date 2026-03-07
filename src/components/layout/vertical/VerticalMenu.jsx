@@ -503,10 +503,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               <MenuItem href={`/${locale}/apps/trip/`}>{dictionary['navigation'].list}</MenuItem>
               <MenuItem href={`/${locale}/apps/trip/market`}>{'Market Trips'}</MenuItem>
             </SubMenu>
-            <SubMenu label="Location" icon={<i className='ri-map-pin-fill' />}>
+            {/* <SubMenu label="Location" icon={<i className='ri-map-pin-fill' />}>
               <MenuItem href={`/${locale}/apps/location/`}>{'Location'}</MenuItem>
               <MenuItem href={`/${locale}/apps/location/info`}>{'Location Info'}</MenuItem>
-            </SubMenu>
+            </SubMenu> */}
           </>
         )}
       </Menu>

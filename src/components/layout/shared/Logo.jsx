@@ -48,7 +48,7 @@ const Logo = ({ color }) => {
   }, [isHovered, layout, isBreakpointReached])
   return (
     <div className='flex items-center'>
-      <img src="https://i.ibb.co/DDNhvHmB/pixelcut-export.png" alt="pixelcut export" border="0" style={{ width: '200px' }} />
+      <img src="https://i.ibb.co/xtSXdBWQ/logo.png" alt="pixelcut export" border="0" style={{ width: '200px' }} />
     </div>
   )
 }

@@ -51,7 +51,7 @@ const Header = ({ mode }) => {
               </IconButton>
               <Link href='/front-pages/landing-page'>
                 <img
-                  src="https://i.ibb.co/DDNhvHmB/pixelcut-export.png"
+                  src="https://i.ibb.co/xtSXdBWQ/logo.png"
                   alt="Logo"
                   style={{ width: "100px" }}
                 />
@@ -62,7 +62,7 @@ const Header = ({ mode }) => {
             <div className='flex items-center gap-10'>
               <Link href='/front-pages/landing-page'>
                 <img
-                  src="https://i.ibb.co/DDNhvHmB/pixelcut-export.png"
+                  src="https://i.ibb.co/xtSXdBWQ/logo.png"
                   alt="Logo"
                   style={{ width: "100px" }}
                 />
