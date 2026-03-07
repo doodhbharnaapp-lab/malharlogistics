@@ -16,7 +16,7 @@
  * Another way is to clear the cookie from the browser's Application/Storage tab and then reload the page.
  */
 const themeConfig = {
-  templateName: 'Jay Malhar',
+  templateName: 'Malhar Logistics',
   homePageUrl: '/dashboards/logistics',
   settingsCookieName: 'materialize-mui-next-demo-1',
   mode: 'system', // 'system', 'light', 'dark'
