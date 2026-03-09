@@ -983,7 +983,6 @@ const TripAdvanceReport = () => {
                         />
                     </div>
                     <br />
-
                     <Divider />
                     <br />
                     {/* Hidden print container */}

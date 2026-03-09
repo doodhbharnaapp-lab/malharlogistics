@@ -786,21 +786,18 @@ export async function GET(request) {
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
-
         // ✅ CHECK PERMISSION - trips:read
         const hasPermission = await checkAnyPermission([
             PERMISSIONS.trips.READ,
             PERMISSIONS.trips.CREATE,
             PERMISSIONS.trips.WRITE
         ])(async () => true)(request)
-
         if (!hasPermission && session.user.role !== 'admin') {
             return NextResponse.json({
                 error: 'Forbidden',
                 message: 'You need trips:read permission'
             }, { status: 403 })
         }
-
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
         const getHistory = searchParams.get('history') === 'true'
@@ -809,7 +806,6 @@ export async function GET(request) {
         const fromDate = searchParams.get('fromDate')
         const toDate = searchParams.get('toDate')
         const withHistory = searchParams.get('withHistory') === 'true'
-
         // Get status history for a specific trip
         if (getHistory && id) {
             if (!ObjectId.isValid(id)) {
@@ -830,7 +826,6 @@ export async function GET(request) {
                 count: history.length
             })
         }
-
         // If ID provided, return single trip with optional history
         if (id) {
             if (!ObjectId.isValid(id)) {
@@ -850,7 +845,6 @@ export async function GET(request) {
                     { status: 404 }
                 )
             }
-
             // Get status history if requested
             if (withHistory) {
                 const history = await db
@@ -869,21 +863,17 @@ export async function GET(request) {
                     { status: 200 }
                 )
             }
-
             return NextResponse.json(
                 { success: true, data: trip },
                 { status: 200 }
             )
         }
-
         // Build filter object for multiple trips
         let filter = { isDeleted: { $ne: true } }
-
         // Filter by vehicle number (exact match)
         if (vehicleNo) {
             filter.vehicleNo = vehicleNo
         }
-
         // Filter by trip status
         if (tripStatus) {
             // Handle multiple statuses if comma-separated
@@ -894,7 +884,6 @@ export async function GET(request) {
                 filter.tripStatus = tripStatus
             }
         }
-
         // Filter by date range
         if (fromDate || toDate) {
             filter.tripDate = {}
@@ -905,44 +894,37 @@ export async function GET(request) {
                 filter.tripDate.$lte = toDate
             }
         }
-
         // Filter by driver name (partial match)
         const driverName = searchParams.get('driverName')
         if (driverName) {
             filter.driverName = { $regex: driverName, $options: 'i' }
         }
-
         // Filter by from/to locations (partial match)
         const fromLocation = searchParams.get('fromLocation')
         if (fromLocation) {
             filter.fromLocation = { $regex: fromLocation, $options: 'i' }
         }
-
         const toLocation = searchParams.get('toLocation')
         if (toLocation) {
             filter.toLocation = { $regex: toLocation, $options: 'i' }
         }
-
         // Filter by LHS number (partial match)
         const lhsNo = searchParams.get('lhsNo')
         if (lhsNo) {
             filter.lhsNo = { $regex: lhsNo, $options: 'i' }
         }
-
         console.log('GET trips filter:', JSON.stringify(filter, null, 2)) // Debug log
-
         const db = await getDB()
-
         // Get pagination parameters
         const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50')
-        const skip = (page - 1) * limit
+        // const limit = parseInt(searchParams.get('limit') || '50')
+        const limit = parseInt(searchParams.get('limit') || '5000')
 
+        const skip = (page - 1) * limit
         // Get sort parameters
         const sortField = searchParams.get('sortField') || 'tripDate'
         const sortOrder = searchParams.get('sortOrder') === 'asc' ? 1 : -1
         let sort = { [sortField]: sortOrder, createdAt: -1 }
-
         // Execute query with pagination
         const trips = await db
             .collection(TRIPS_COLLECTION)
@@ -951,12 +933,10 @@ export async function GET(request) {
             .skip(skip)
             .limit(limit)
             .toArray()
-
         // Get total count for pagination
         const totalCount = await db
             .collection(TRIPS_COLLECTION)
             .countDocuments(filter)
-
         return NextResponse.json({
             success: true,
             data: trips,
@@ -976,7 +956,6 @@ export async function GET(request) {
                 lhsNo: lhsNo || null
             }
         })
-
     } catch (error) {
         console.error('GET trips error:', error)
         return NextResponse.json(

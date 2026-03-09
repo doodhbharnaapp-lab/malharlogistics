@@ -9,6 +9,8 @@ import { useReactToPrint } from 'react-to-print'
 const TripReport = () => {
     /* ---------------- STATE ---------------- */
     const [data, setData] = useState([])
+    const [page, setPage] = useState(1)
+    const [rowsPerPage, setRowsPerPage] = useState(50)
     const [groupedData, setGroupedData] = useState({}) // Grouped by vehicle
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -135,7 +137,7 @@ const TripReport = () => {
             cell: (row) => row.statusRemarks || '-'
         }
     ]
-    /* ================= FETCH TRIPS WITH ADVANCE DATA ================= */
+    // Paginated data
     /* ================= FETCH TRIPS WITH ADVANCE DATA ================= */
     useEffect(() => {
         const fetchAllTripData = async () => {
@@ -440,6 +442,26 @@ const TripReport = () => {
             overallTotals: totals
         }
     }, [data, filters])
+    const paginatedVehicles = useMemo(() => {
+        const vehicleKeys = Object.keys(filteredGroupedData)
+        const startIndex = (page - 1) * rowsPerPage
+        const endIndex = startIndex + rowsPerPage
+
+        const paginatedKeys = vehicleKeys.slice(startIndex, endIndex)
+
+        const paginated = {}
+        paginatedKeys.forEach(key => {
+            paginated[key] = filteredGroupedData[key]
+        })
+
+        return {
+            vehicles: paginated,
+            totalPages: Math.ceil(vehicleKeys.length / rowsPerPage),
+            totalVehicles: vehicleKeys.length,
+            startIndex: startIndex + 1,
+            endIndex: Math.min(endIndex, vehicleKeys.length)
+        }
+    }, [filteredGroupedData, page, rowsPerPage])
     /* ---------------- TOGGLE VEHICLE EXPAND ---------------- */
     const handleVehicleToggle = (vehicleNo) => {
         setExpandedVehicles(prev => ({
@@ -755,6 +777,119 @@ const TripReport = () => {
                     </Grid>
                 </CardContent>
             </Card>
+            {/* Pagination Controls */}
+            {Object.keys(filteredGroupedData).length > 0 && (
+                <Card className="mb-4 no-print">
+                    <CardContent>
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+                            {/* Left side - Showing info */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                <Typography variant="body2">
+                                    Showing <strong>{paginatedVehicles.startIndex}</strong> to <strong>{paginatedVehicles.endIndex}</strong> of <strong>{paginatedVehicles.totalVehicles}</strong> vehicles
+                                </Typography>
+
+                                {/* Rows per page selector */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2">Show:</Typography>
+                                    <select
+                                        value={rowsPerPage}
+                                        onChange={(e) => {
+                                            setRowsPerPage(Number(e.target.value))
+                                            setPage(1)
+                                        }}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            border: '1px solid #ccc',
+                                            backgroundColor: 'white'
+                                        }}
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                </Box>
+                            </Box>
+
+                            {/* Right side - Pagination buttons */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setPage(1)}
+                                    disabled={page === 1}
+                                >
+                                    First
+                                </Button>
+
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                >
+                                    Previous
+                                </Button>
+
+                                <Typography variant="body2" sx={{ mx: 1 }}>
+                                    Page <strong>{page}</strong> of <strong>{paginatedVehicles.totalPages}</strong>
+                                </Typography>
+
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setPage(p => Math.min(paginatedVehicles.totalPages, p + 1))}
+                                    disabled={page === paginatedVehicles.totalPages}
+                                >
+                                    Next
+                                </Button>
+
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => setPage(paginatedVehicles.totalPages)}
+                                    disabled={page === paginatedVehicles.totalPages}
+                                >
+                                    Last
+                                </Button>
+                            </Box>
+                        </Box>
+
+                        {/* Quick page jump (optional) */}
+                        {paginatedVehicles.totalPages > 5 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                                <Typography variant="body2">Go to page:</Typography>
+                                <TextField
+                                    type="number"
+                                    size="small"
+                                    value={page}
+                                    onChange={(e) => {
+                                        const newPage = parseInt(e.target.value)
+                                        if (newPage >= 1 && newPage <= paginatedVehicles.totalPages) {
+                                            setPage(newPage)
+                                        }
+                                    }}
+                                    inputProps={{
+                                        min: 1,
+                                        max: paginatedVehicles.totalPages,
+                                        style: { width: '60px', textAlign: 'center' }
+                                    }}
+                                />
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={() => {
+                                        // Page already updates via onChange
+                                    }}
+                                >
+                                    Go
+                                </Button>
+                            </Box>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
             <br />
             {/* Report Content */}
             <div ref={componentRef}>

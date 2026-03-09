@@ -1302,7 +1302,7 @@ export async function GET(request) {
 
         // Get pagination parameters
         const page = parseInt(searchParams.get('page') || '1')
-        const limit = parseInt(searchParams.get('limit') || '50')
+        const limit = parseInt(searchParams.get('limit') || '5000')
         const skip = (page - 1) * limit
 
         // Get sort parameters
