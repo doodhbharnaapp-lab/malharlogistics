@@ -487,6 +487,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         )}
         {userRole === 'account2' && (
           <>
+            <SubMenu label="vehicles" icon={<i className='ri-car-line' />}>
+              <MenuItem href={`/${locale}/apps/vehicles/list`}>{dictionary['navigation'].list}</MenuItem>
+              <MenuItem href={`/${locale}/apps/vehicles/market`}>{'Market Vehicles'}</MenuItem>
+            </SubMenu>
             <SubMenu label="Trips" icon={<i className='ri-file-copy-line' />}>
 
               <MenuItem href={`/${locale}/apps/trip/advance/`}>{'Advance'}</MenuItem>
