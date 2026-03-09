@@ -2481,7 +2481,9 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 /* ================= CONSTANTS ================= */
-const advanceTypes = ['1st Advance', '2nd Advance', '3rd Advance', '4th Advance', 'Diesel 1', 'Diesel 2']
+// const advanceTypes = ['1st Advance', '2nd Advance', '3rd Advance', '4th Advance', 'Diesel 1', 'Diesel 2']
+const advanceTypes = ['Diesel Advance 1', 'Diesel Advance 2', 'Diesel Advance 3', 'Diesel Advance 4', 'Diesel Advance 5', '1st Advance', '2nd Advance', '3rd Advance', '4th Advance', '5th Advance', 'Balance']
+
 const columnHelper = createColumnHelper()
 /* ================================================= */
 const AdvanceRegister = () => {
@@ -2591,32 +2593,57 @@ const AdvanceRegister = () => {
             return { hasOverlapping: false, message: '', activeTrips: [] }
         }
     }
-    const checkAdvanceExistsOnDate = (date) => {
+    // const checkAdvanceExistsOnDate = (date) => {
+    //     if (!trip.advances || trip.advances.length === 0) return false
+    //     console.log('Checking if any advance exists on date:', {
+    //         searchDate: date,
+    //         existingAdvances: trip.advances.map(a => ({
+    //             date: a.date,
+    //             type: a.advanceType,
+    //             status: a.status
+    //         }))
+    //     })
+    //     // Check if ANY advance (UNPAID) exists on this date
+    //     const existingAdvance = trip.advances.find(adv => {
+    //         const advDate = adv.date || ''
+    //         const compareDate = date || ''
+    //         // Sirf date match check karo, advanceType mat check karo
+    //         const dateMatch = advDate === compareDate
+    //         // Sirf UNPAID advances check karo
+    //         const isUnpaid = adv.status === 'unpaid'
+    //         if (dateMatch && isUnpaid) {
+    //             console.log('Found existing UNPAID advance on this date:', adv)
+    //             return true
+    //         }
+    //         return false
+    //     })
+    //     return !!existingAdvance
+    // }
+    const checkAdvanceExistsOnDate = (date, newAdvanceType) => {
         if (!trip.advances || trip.advances.length === 0) return false
-        console.log('Checking if any advance exists on date:', {
-            searchDate: date,
-            existingAdvances: trip.advances.map(a => ({
-                date: a.date,
-                type: a.advanceType,
-                status: a.status
-            }))
-        })
-        // Check if ANY advance (UNPAID) exists on this date
-        const existingAdvance = trip.advances.find(adv => {
-            const advDate = adv.date || ''
-            const compareDate = date || ''
-            // Sirf date match check karo, advanceType mat check karo
-            const dateMatch = advDate === compareDate
-            // Sirf UNPAID advances check karo
-            const isUnpaid = adv.status === 'unpaid'
-            if (dateMatch && isUnpaid) {
-                console.log('Found existing UNPAID advance on this date:', adv)
-                return true
-            }
-            return false
-        })
-        return !!existingAdvance
+
+        const advancesOnDate = trip.advances.filter(
+            adv => adv.date === date && adv.status === 'unpaid'
+        )
+
+        if (advancesOnDate.length === 0) return false
+
+        const isDiesel = type => type.toLowerCase().includes('diesel')
+
+        const hasDiesel = advancesOnDate.some(a => isDiesel(a.advanceType))
+        const hasAdvance = advancesOnDate.some(a => !isDiesel(a.advanceType))
+
+        const newIsDiesel = isDiesel(newAdvanceType)
+
+        // block diesel if diesel already exists that day
+        if (newIsDiesel && hasDiesel) return true
+
+        // block advance if advance already exists that day
+        if (!newIsDiesel && hasAdvance) return true
+
+        return false
     }
+
     /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
     const checkVehicleActiveTrips = async (vehicleNo, currentTripId = null) => {
         try {
@@ -3225,11 +3252,30 @@ const AdvanceRegister = () => {
             })
 
             // Filter rows to exclude those with zero unpaid amount
+            // const rowsWithUnpaid = filteredRows.filter(trip => {
+            //     const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
+            //     const totalUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
+            //     return totalUnpaid > 0
+            // })
             const rowsWithUnpaid = filteredRows.filter(trip => {
                 const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
+
+                if (unpaidAdvances.length === 0) return false
+
+                // check latest unpaid advance
+                const latestUnpaid = unpaidAdvances[unpaidAdvances.length - 1]
+
+                const dieselTypes = ['Diesel Advance', 'Diesel 1', 'Diesel 2', 'Diesel Advance 1', 'Diesel Advance 2']
+
+                // if latest unpaid is diesel → skip this trip
+                if (dieselTypes.includes(latestUnpaid.advanceType)) {
+                    return false
+                }
+
                 const totalUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
                 return totalUnpaid > 0
             })
+
 
             // Add header
             doc.setFillColor(25, 118, 210)
@@ -4247,7 +4293,7 @@ const AdvanceRegister = () => {
                                             >
                                                 {bulkProcessing ? 'Processing...' : 'Proceed Advances'}
                                             </Button>
-                                            <Button
+                                            {/* <Button
                                                 variant='outlined'
                                                 onClick={exportToPDF}
                                                 disabled={loading || rows.length === 0}
@@ -4255,7 +4301,7 @@ const AdvanceRegister = () => {
                                                 sx={{ ml: 1 }}
                                             >
                                                 Export PDF
-                                            </Button>
+                                            </Button> */}
                                         </div>
                                     </div>
                                     {proceedLoading ? (

@@ -7210,7 +7210,7 @@ const AdvanceRegister = () => {
                                             >
                                                 {bulkProcessing ? 'Processing...' : 'Proceed Advances'}
                                             </Button>
-                                            <Button
+                                            {/* <Button
                                                 variant='outlined'
                                                 onClick={exportToPDF}
                                                 disabled={loading || rows.length === 0}
@@ -7218,7 +7218,7 @@ const AdvanceRegister = () => {
                                                 sx={{ ml: 1 }}
                                             >
                                                 Export PDF
-                                            </Button>
+                                            </Button> */}
                                         </div>
                                     </div>
 
