@@ -2482,8 +2482,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 /* ================= CONSTANTS ================= */
 // const advanceTypes = ['1st Advance', '2nd Advance', '3rd Advance', '4th Advance', 'Diesel 1', 'Diesel 2']
-const advanceTypes = ['Diesel Advance 1', 'Diesel Advance 2', 'Diesel Advance 3', 'Diesel Advance 4', 'Diesel Advance 5', '1st Advance', '2nd Advance', '3rd Advance', '4th Advance', '5th Advance', 'Balance']
-
+const advanceTypes = ['1st Advance', '2nd Advance', '3rd Advance', '4th Advance', '5th Advance', 'Diesel Advance 1', 'Diesel Advance 2', 'Diesel Advance 3', 'Diesel Advance 4', 'Diesel Advance 5', 'Balance']
 const columnHelper = createColumnHelper()
 /* ================================================= */
 const AdvanceRegister = () => {
@@ -2621,31 +2620,21 @@ const AdvanceRegister = () => {
     // }
     const checkAdvanceExistsOnDate = (date, newAdvanceType) => {
         if (!trip.advances || trip.advances.length === 0) return false
-
         const advancesOnDate = trip.advances.filter(
             adv => adv.date === date && adv.status === 'unpaid'
         )
-
         if (advancesOnDate.length === 0) return false
-
         const isDiesel = type =>
             typeof type === 'string' && type.toLowerCase().includes('diesel')
-
         const hasDiesel = advancesOnDate.some(a => isDiesel(a.advanceType))
         const hasAdvance = advancesOnDate.some(a => !isDiesel(a.advanceType))
-
         const newIsDiesel = isDiesel(newAdvanceType)
-
         // block diesel if diesel already exists that day
         if (newIsDiesel && hasDiesel) return true
-
         // block advance if advance already exists that day
         if (!newIsDiesel && hasAdvance) return true
-
         return false
     }
-
-
     /* ================= CHECK VEHICLE ACTIVE TRIPS ================= */
     const checkVehicleActiveTrips = async (vehicleNo, currentTripId = null) => {
         try {
@@ -3014,9 +3003,7 @@ const AdvanceRegister = () => {
                 showSnackbar('Trip ID is required', 'error')
                 return
             }
-
             const tripId = row._id || row.id
-
             // IMMEDIATELY open modal with existing row data
             setTrip({
                 id: row.id || null,
@@ -3045,9 +3032,7 @@ const AdvanceRegister = () => {
                 availableBalance: row.availableBalance || 0,
                 tripDate: row.tripDate || ''
             })
-
             setOpen(true) // Open modal IMMEDIATELY
-
             // Then fetch fresh data in background
             setFormLoading(true)
             const data = await fetchTripWithAdvances(tripId)
@@ -3238,432 +3223,6 @@ const AdvanceRegister = () => {
             setFormLoading(false)
         }
     }
-    /* ================= EXPORT TO PDF FUNCTION ================= */
-    // const exportToPDF = () => {
-    //     try {
-    //         // Create new PDF document with larger format
-    //         const doc = new jsPDF({
-    //             orientation: 'landscape',
-    //             unit: 'mm',
-    //             format: 'a3' // Use A3 for better visibility
-    //         })
-    //         const currentDate = new Date().toLocaleDateString('en-IN')
-    //         const currentTime = new Date().toLocaleTimeString('en-IN', {
-    //             hour: '2-digit',
-    //             minute: '2-digit'
-    //         })
-    //         const rowsWithUnpaid = filteredRows.filter(trip => {
-    //             const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
-
-    //             // Remove diesel advances completely
-    //             const nonDieselUnpaid = unpaidAdvances.filter(
-    //                 a => !a.advanceType.toLowerCase().includes('diesel')
-    //             )
-
-    //             if (nonDieselUnpaid.length === 0) return false
-
-    //             const totalUnpaid = nonDieselUnpaid.reduce((s, a) => s + Number(a.amount || 0), 0)
-
-    //             return totalUnpaid > 0
-    //         })
-
-
-
-    //         // Add header
-    //         doc.setFillColor(25, 118, 210)
-    //         doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F')
-    //         // Title
-    //         doc.setTextColor(255, 255, 255)
-    //         doc.setFontSize(20)
-    //         doc.setFont('helvetica', 'bold')
-    //         doc.text('ADVANCE REGISTER REPORT', doc.internal.pageSize.width / 2, 20, { align: 'center' })
-
-    //         // Add subtitle showing filtered count
-    //         doc.setFontSize(11)
-    //         doc.setFont('helvetica', 'normal')
-    //         doc.text(`Generated on: ${currentDate} at ${currentTime}`, doc.internal.pageSize.width / 2, 32, {
-    //             align: 'center'
-    //         })
-
-    //         // Add note about filtering
-    //         if (filteredRows.length > rowsWithUnpaid.length) {
-    //             doc.setFontSize(9)
-    //             doc.setTextColor(255, 255, 200)
-    //             doc.text(`(Showing ${rowsWithUnpaid.length} entries with unpaid advances out of ${filteredRows.length} total entries)`,
-    //                 doc.internal.pageSize.width / 2, 38, {
-    //                 align: 'center'
-    //             })
-    //         }
-
-    //         // Prepare table data
-    //         const tableData = rowsWithUnpaid.map((trip, index) => {
-    //             // Calculate amounts
-    //             const paidAdvances = trip.advances?.filter(a => a.status === 'paid') || []
-    //             const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
-    //             const totalAdvancePaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-    //             const totalUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-    //             const balance = (trip.totalAdvanceAmount || 0) - totalAdvancePaid
-
-    //             // Get trip date
-    //             let tripDate = trip.createdAt ? new Date(trip.createdAt).toLocaleDateString('en-IN') : 'N/A'
-    //             if (!tripDate || tripDate === 'Invalid Date') {
-    //                 const dates = trip.advances?.map(a => a.date).filter(d => d) || []
-    //                 if (dates.length > 0) {
-    //                     dates.sort()
-    //                     tripDate = dates[0]
-    //                 }
-    //             }
-
-    //             // Get latest unpaid advance amount
-    //             const latestUnpaidAdvance =
-    //                 unpaidAdvances.length > 0 ? Number(unpaidAdvances[unpaidAdvances.length - 1]?.amount || 0).toFixed(2) : '0.00'
-
-    //             // Format account number for privacy
-    //             const formattedAccountNo = trip.accountNo
-    //                 ? trip.accountNo.length > 8
-    //                     ? `XXXX${trip.accountNo.slice(-4)}`
-    //                     : trip.accountNo
-    //                 : 'N/A'
-
-    //             // Get latest remark
-    //             const latestRemark =
-    //                 unpaidAdvances.length > 0 ? unpaidAdvances[unpaidAdvances.length - 1]?.remark || 'N/A' : 'N/A'
-
-    //             // Format amounts with thousand separators
-    //             const formatAmount = amount => {
-    //                 return parseFloat(amount).toLocaleString('en-IN', {
-    //                     minimumFractionDigits: 2,
-    //                     maximumFractionDigits: 2
-    //                 })
-    //             }
-
-    //             return [
-    //                 (index + 1).toString(), // Sr. No.
-    //                 tripDate, // Trip Date
-    //                 trip.lhsNo || 'N/A', // LHS No.
-    //                 trip.vehicleNo || 'N/A', // Vehicle No
-    //                 trip.fromLocation || 'N/A', // From
-    //                 trip.toLocation || 'N/A', // To
-    //                 formatAmount(trip.totalAdvanceAmount || 0), // Total Advance
-    //                 formatAmount(totalAdvancePaid), // Advance Paid
-    //                 formatAmount(latestUnpaidAdvance), // Advance (Unpaid)
-    //                 formatAmount(balance), // Balance
-    //                 trip.ifscCode || 'N/A', // IFSC Code
-    //                 trip.accountNo, // Account No
-    //                 trip.bankName || 'N/A', // Bank Name
-    //                 trip.accountHolderName || 'N/A', // Account Holder Name
-    //                 latestRemark.substring(0, 50) // Remark (truncate if too long)
-    //             ]
-    //         })
-
-    //         // If no data with unpaid advances, show message
-    //         if (tableData.length === 0) {
-    //             doc.setFontSize(14)
-    //             doc.setTextColor(100, 100, 100)
-    //             doc.text('No entries with unpaid advances found', doc.internal.pageSize.width / 2, 100, {
-    //                 align: 'center'
-    //             })
-    //             doc.save(`Advance_Register_No_Unpaid_${new Date().toISOString().split('T')[0]}.pdf`)
-    //             showSnackbar('No unpaid entries found to export', 'info')
-    //             return
-    //         }
-
-    //         // Define column widths - optimized for A3 landscape
-    //         const columnWidths = [
-    //             15, // 0: Sr. No.
-    //             25, // 1: Trip Date
-    //             25, // 2: LHS No.
-    //             28, // 3: Vehicle No
-    //             25, // 4: From
-    //             25, // 5: To
-    //             28, // 6: Total Advance
-    //             28, // 7: Advance Paid
-    //             28, // 8: Advance (Unpaid)
-    //             28, // 9: Balance
-    //             25, // 10: IFSC Code
-    //             35, // 11: Account No
-    //             30, // 12: Bank Name
-    //             30, // 13: Account Holder
-    //             30  // 14: Remark
-    //         ]
-
-    //         // AutoTable configuration
-    //         autoTable(doc, {
-    //             startY: 45,
-    //             head: [
-    //                 [
-    //                     'Sr. No.',
-    //                     'Trip Date',
-    //                     'LHS No.',
-    //                     'Vehicle No',
-    //                     'From',
-    //                     'To',
-    //                     'Total Advance',
-    //                     'Advance Paid',
-    //                     'Advance (Unpaid)',
-    //                     'Balance',
-    //                     'IFSC Code',
-    //                     'Account No',
-    //                     'Bank Name',
-    //                     'Account Holder',
-    //                     'Remark'
-    //                 ]
-    //             ],
-    //             body: tableData,
-    //             theme: 'grid',
-    //             headStyles: {
-    //                 fillColor: [41, 128, 185], // Blue header
-    //                 textColor: 255,
-    //                 fontSize: 9,
-    //                 fontStyle: 'bold',
-    //                 halign: 'center',
-    //                 cellPadding: 4,
-    //                 lineWidth: 0.5,
-    //                 lineColor: [255, 255, 255]
-    //             },
-    //             bodyStyles: {
-    //                 fontSize: 8,
-    //                 cellPadding: 3,
-    //                 lineColor: [200, 200, 200],
-    //                 lineWidth: 0.2,
-    //                 textColor: [50, 50, 50]
-    //             },
-    //             alternateRowStyles: {
-    //                 fillColor: [245, 245, 245]
-    //             },
-    //             columnStyles: {
-    //                 0: {
-    //                     cellWidth: columnWidths[0],
-    //                     halign: 'center',
-    //                     valign: 'middle'
-    //                 },
-    //                 1: {
-    //                     cellWidth: columnWidths[1],
-    //                     halign: 'center'
-    //                 },
-    //                 2: {
-    //                     cellWidth: columnWidths[2],
-    //                     halign: 'center'
-    //                 },
-    //                 3: {
-    //                     cellWidth: columnWidths[3],
-    //                     halign: 'center'
-    //                 },
-    //                 4: {
-    //                     cellWidth: columnWidths[4],
-    //                     halign: 'center'
-    //                 },
-    //                 5: {
-    //                     cellWidth: columnWidths[5],
-    //                     halign: 'center'
-    //                 },
-    //                 6: {
-    //                     cellWidth: columnWidths[6],
-    //                     halign: 'right',
-    //                     fontStyle: 'bold'
-    //                 },
-    //                 7: {
-    //                     cellWidth: columnWidths[7],
-    //                     halign: 'right',
-    //                     fontStyle: 'bold'
-    //                 },
-    //                 8: {
-    //                     cellWidth: columnWidths[8],
-    //                     halign: 'right',
-    //                     fontStyle: 'bold',
-    //                     fillColor: [255, 243, 205] // Highlight unpaid advances
-    //                 },
-    //                 9: {
-    //                     cellWidth: columnWidths[9],
-    //                     halign: 'right',
-    //                     fontStyle: 'bold'
-    //                 },
-    //                 10: {
-    //                     cellWidth: columnWidths[10],
-    //                     halign: 'center'
-    //                 },
-    //                 11: {
-    //                     cellWidth: columnWidths[11],
-    //                     halign: 'center'
-    //                 },
-    //                 12: {
-    //                     cellWidth: columnWidths[12],
-    //                     halign: 'center'
-    //                 },
-    //                 13: {
-    //                     cellWidth: columnWidths[13],
-    //                     halign: 'center'
-    //                 },
-    //                 14: {
-    //                     cellWidth: columnWidths[14],
-    //                     halign: 'left'
-    //                 }
-    //             },
-    //             styles: {
-    //                 overflow: 'linebreak',
-    //                 cellWidth: 'auto',
-    //                 minCellHeight: 8,
-    //                 valign: 'middle'
-    //             },
-    //             margin: {
-    //                 left: 5,
-    //                 right: 5,
-    //                 top: 45,
-    //                 bottom: 40
-    //             },
-    //             tableWidth: 'auto',
-    //             didParseCell: function (data) {
-    //                 // Skip header rows
-    //                 if (data.row.index < 0) return
-
-    //                 // Convert cell text to string for processing
-    //                 let cellText = ''
-    //                 if (Array.isArray(data.cell.text)) {
-    //                     cellText = data.cell.text.join(' ')
-    //                 } else if (typeof data.cell.text === 'string') {
-    //                     cellText = data.cell.text
-    //                 } else if (data.cell.text != null) {
-    //                     cellText = String(data.cell.text)
-    //                 }
-
-    //                 // Color code balance column
-    //                 if (data.column.index === 9) {
-    //                     // Remove commas and convert to number
-    //                     const balanceText = cellText.replace(/,/g, '')
-    //                     const balance = parseFloat(balanceText)
-    //                     if (!isNaN(balance)) {
-    //                         if (balance < 0) {
-    //                             data.cell.styles.fillColor = [255, 230, 230] // Light red
-    //                             data.cell.styles.textColor = [255, 0, 0]
-    //                         } else if (balance === 0) {
-    //                             data.cell.styles.fillColor = [230, 255, 230] // Light green
-    //                             data.cell.styles.textColor = [0, 128, 0]
-    //                         }
-    //                     }
-    //                 }
-
-    //                 // Highlight if unpaid advance exists
-    //                 if (data.column.index === 8) {
-    //                     // Remove commas and convert to number
-    //                     const unpaidText = cellText.replace(/,/g, '')
-    //                     const unpaid = parseFloat(unpaidText)
-    //                     if (!isNaN(unpaid) && unpaid > 0) {
-    //                         data.cell.styles.textColor = [220, 53, 69] // Red for pending
-    //                     }
-    //                 }
-    //             },
-    //             didDrawPage: function (data) {
-    //                 // Footer
-    //                 const pageCount = doc.internal.getNumberOfPages()
-    //                 const pageHeight = doc.internal.pageSize.height
-
-    //                 // Footer separator
-    //                 doc.setDrawColor(180, 180, 180)
-    //                 doc.setLineWidth(0.3)
-    //                 doc.line(10, pageHeight - 20, doc.internal.pageSize.width - 10, pageHeight - 20)
-
-    //                 // Page number
-    //                 doc.setFontSize(9)
-    //                 doc.setTextColor(100)
-    //                 doc.setFont('helvetica', 'normal')
-    //                 doc.text(`Page ${data.pageNumber} of ${pageCount}`, doc.internal.pageSize.width / 2, pageHeight - 10, {
-    //                     align: 'center'
-    //                 })
-
-    //                 // Company footer
-    //                 doc.setFontSize(8)
-    //                 doc.text('© Transport Management System', doc.internal.pageSize.width / 2, pageHeight - 5, {
-    //                     align: 'center'
-    //                 })
-    //             }
-    //         })
-
-    //         // Calculate totals for filtered rows only
-    //         const totalAdvanceSum = rowsWithUnpaid.reduce((sum, trip) => sum + (trip.totalAdvanceAmount || 0), 0)
-    //         const totalPaidSum = rowsWithUnpaid.reduce((sum, trip) => {
-    //             const paidAdvances = trip.advances?.filter(a => a.status === 'paid') || []
-    //             return sum + paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-    //         }, 0)
-    //         const totalUnpaidSum = rowsWithUnpaid.reduce((sum, trip) => {
-    //             const unpaidAdvances = trip.advances?.filter(a => a.status !== 'paid') || []
-    //             return sum + unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-    //         }, 0)
-    //         const totalBalanceSum = rowsWithUnpaid.reduce((sum, trip) => {
-    //             const paidAdvances = trip.advances?.filter(a => a.status === 'paid') || []
-    //             const totalPaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-    //             return sum + ((trip.totalAdvanceAmount || 0) - totalPaid)
-    //         }, 0)
-
-    //         // Add summary section
-    //         const finalY = doc.lastAutoTable.finalY || 50
-    //         doc.setFillColor(248, 249, 250)
-    //         doc.rect(5, finalY + 5, doc.internal.pageSize.width - 10, 45, 'F')
-
-    //         // Draw border around summary
-    //         doc.setDrawColor(200, 200, 200)
-    //         doc.setLineWidth(0.3)
-    //         doc.rect(5, finalY + 5, doc.internal.pageSize.width - 10, 45)
-
-    //         doc.setFontSize(12)
-    //         doc.setTextColor(33, 37, 41)
-    //         doc.setFont('helvetica', 'bold')
-    //         doc.text('SUMMARY', 10, finalY + 15)
-    //         doc.setDrawColor(200, 200, 200)
-    //         doc.setLineWidth(0.2)
-    //         doc.line(10, finalY + 18, 60, finalY + 18)
-
-    //         // Format numbers for summary
-    //         const formatCurrency = amount => {
-    //             return amount.toLocaleString('en-IN', {
-    //                 minimumFractionDigits: 2,
-    //                 maximumFractionDigits: 2
-    //             })
-    //         }
-
-    //         // Financial summary in two columns
-    //         doc.setFontSize(10)
-    //         doc.setFont('helvetica', 'normal')
-
-    //         // Left column
-    //         doc.text(
-    //             [
-    //                 `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
-    //                 `Total Paid: ${formatCurrency(totalPaidSum)}`,
-    //                 `Total Unpaid: ${formatCurrency(totalUnpaidSum)}`
-    //             ],
-    //             10,
-    //             finalY + 25
-    //         )
-
-    //         // Right column
-    //         doc.text(
-    //             [
-    //                 `Total Balance: ${formatCurrency(totalBalanceSum)}`,
-    //                 `Number of Entries: ${rowsWithUnpaid.length}`,
-    //                 `Filtered from: ${filteredRows.length} total`
-    //             ],
-    //             doc.internal.pageSize.width / 2 + 20,
-    //             finalY + 25
-    //         )
-
-    //         // Add note about filter
-    //         doc.setFont('helvetica', 'italic')
-    //         doc.setTextColor(108, 117, 125)
-    //         doc.setFontSize(8)
-    //         doc.text('* Report filtered to show only entries with unpaid advances', 10, finalY + 42)
-
-    //         // Save the PDF
-    //         const fileName = `Advance_Register_Unpaid_Only_${new Date().toISOString().split('T')[0]}.pdf`
-    //         doc.save(fileName)
-    //         showSnackbar(`PDF exported successfully with ${rowsWithUnpaid.length} entries!`, 'success')
-    //     } catch (error) {
-    //         console.error('Error exporting to PDF:', error)
-    //         showSnackbar('Failed to export PDF: ' + error.message, 'error')
-    //     }
-    // }
-
-
-
     const exportToPDF = () => {
         try {
             const doc = new jsPDF({
@@ -3671,13 +3230,11 @@ const AdvanceRegister = () => {
                 unit: 'mm',
                 format: 'a3'
             })
-
             const currentDate = new Date().toLocaleDateString('en-IN')
             const currentTime = new Date().toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit'
             })
-
             // BANK ADVANCE TYPES ONLY
             const bankAdvanceTypes = [
                 '1st Advance',
@@ -3687,27 +3244,21 @@ const AdvanceRegister = () => {
                 '5th Advance',
                 'Balance'
             ]
-
             // FILTER TRIPS WITH UNPAID BANK ADVANCES
             const rowsWithUnpaid = filteredRows.filter(trip => {
                 const bankAdvances = (trip.advances || []).filter(a =>
                     bankAdvanceTypes.includes(a.advanceType)
                 )
-
                 const unpaidAdvances = bankAdvances.filter(a => a.status !== 'paid')
-
                 const totalUnpaid = unpaidAdvances.reduce(
                     (s, a) => s + Number(a.amount || 0),
                     0
                 )
-
                 return totalUnpaid > 0
             })
-
             // HEADER
             doc.setFillColor(25, 118, 210)
             doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F')
-
             doc.setTextColor(255, 255, 255)
             doc.setFontSize(20)
             doc.setFont('helvetica', 'bold')
@@ -3717,7 +3268,6 @@ const AdvanceRegister = () => {
                 20,
                 { align: 'center' }
             )
-
             doc.setFontSize(11)
             doc.setFont('helvetica', 'normal')
             doc.text(
@@ -3726,50 +3276,40 @@ const AdvanceRegister = () => {
                 32,
                 { align: 'center' }
             )
-
             // TABLE DATA
             const tableData = rowsWithUnpaid.map((trip, index) => {
                 const bankAdvances = (trip.advances || []).filter(a =>
                     bankAdvanceTypes.includes(a.advanceType)
                 )
-
                 const paidAdvances = bankAdvances.filter(a => a.status === 'paid')
                 const unpaidAdvances = bankAdvances.filter(a => a.status !== 'paid')
-
                 const totalAdvancePaid = paidAdvances.reduce(
                     (s, a) => s + Number(a.amount || 0),
                     0
                 )
-
                 const totalUnpaid = unpaidAdvances.reduce(
                     (s, a) => s + Number(a.amount || 0),
                     0
                 )
-
                 const balance = (trip.totalAdvanceAmount || 0) - totalAdvancePaid
-
                 let tripDate = trip.createdAt
                     ? new Date(trip.createdAt).toLocaleDateString('en-IN')
                     : 'N/A'
-
                 const latestUnpaidAdvance =
                     unpaidAdvances.length > 0
                         ? Number(
                             unpaidAdvances[unpaidAdvances.length - 1]?.amount || 0
                         ).toFixed(2)
                         : '0.00'
-
                 const latestRemark =
                     unpaidAdvances.length > 0
                         ? unpaidAdvances[unpaidAdvances.length - 1]?.remark || 'N/A'
                         : 'N/A'
-
                 const formatAmount = amount =>
                     parseFloat(amount).toLocaleString('en-IN', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     })
-
                 return [
                     (index + 1).toString(),
                     tripDate,
@@ -3788,7 +3328,6 @@ const AdvanceRegister = () => {
                     latestRemark.substring(0, 50)
                 ]
             })
-
             if (tableData.length === 0) {
                 doc.setFontSize(14)
                 doc.setTextColor(100)
@@ -3798,12 +3337,10 @@ const AdvanceRegister = () => {
                     100,
                     { align: 'center' }
                 )
-
                 doc.save(`Advance_Register_No_Unpaid.pdf`)
                 showSnackbar('No unpaid entries found to export', 'info')
                 return
             }
-
             autoTable(doc, {
                 startY: 45,
                 head: [[
@@ -3839,13 +3376,11 @@ const AdvanceRegister = () => {
                     fillColor: [245, 245, 245]
                 }
             })
-
             // TOTALS
             const totalAdvanceSum = rowsWithUnpaid.reduce(
                 (sum, trip) => sum + (trip.totalAdvanceAmount || 0),
                 0
             )
-
             const totalPaidSum = rowsWithUnpaid.reduce((sum, trip) => {
                 const bankAdvances = (trip.advances || []).filter(a =>
                     bankAdvanceTypes.includes(a.advanceType)
@@ -3853,7 +3388,6 @@ const AdvanceRegister = () => {
                 const paid = bankAdvances.filter(a => a.status === 'paid')
                 return sum + paid.reduce((s, a) => s + Number(a.amount || 0), 0)
             }, 0)
-
             const totalUnpaidSum = rowsWithUnpaid.reduce((sum, trip) => {
                 const bankAdvances = (trip.advances || []).filter(a =>
                     bankAdvanceTypes.includes(a.advanceType)
@@ -3861,22 +3395,17 @@ const AdvanceRegister = () => {
                 const unpaid = bankAdvances.filter(a => a.status !== 'paid')
                 return sum + unpaid.reduce((s, a) => s + Number(a.amount || 0), 0)
             }, 0)
-
             const finalY = doc.lastAutoTable.finalY || 50
-
             doc.setFontSize(12)
             doc.setFont('helvetica', 'bold')
             doc.text('SUMMARY', 10, finalY + 15)
-
             doc.setFontSize(10)
             doc.setFont('helvetica', 'normal')
-
             const formatCurrency = amount =>
                 amount.toLocaleString('en-IN', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })
-
             doc.text(
                 [
                     `Total Advance Amount: ${formatCurrency(totalAdvanceSum)}`,
@@ -3886,11 +3415,9 @@ const AdvanceRegister = () => {
                 10,
                 finalY + 25
             )
-
             doc.save(
                 `Advance_Register_Unpaid_Only_${new Date().toISOString().split('T')[0]}.pdf`
             )
-
             showSnackbar(
                 `PDF exported successfully with ${rowsWithUnpaid.length} entries!`,
                 'success'
@@ -3900,7 +3427,6 @@ const AdvanceRegister = () => {
             showSnackbar('Failed to export PDF: ' + error.message, 'error')
         }
     }
-
     /* ================= OPEN PROCEED ADVANCES MODAL ================= */
     const openProceedAdvances = () => {
         setProceedOpen(true)

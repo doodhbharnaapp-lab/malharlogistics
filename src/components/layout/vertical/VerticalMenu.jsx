@@ -492,6 +492,8 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               <MenuItem href={`/${locale}/apps/vehicles/market`}>{'Market Vehicles'}</MenuItem>
             </SubMenu>
             <SubMenu label="Trips" icon={<i className='ri-file-copy-line' />}>
+              <MenuItem href={`/${locale}/apps/trip/report`}>{'Trip Report'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/trip/report/market`}>{'Market Trip Report'}</MenuItem>
 
               <MenuItem href={`/${locale}/apps/trip/advance/`}>{'Advance'}</MenuItem>
               <MenuItem href={`/${locale}/apps/trip/advance/market`}>{'Market Advance'}</MenuItem>

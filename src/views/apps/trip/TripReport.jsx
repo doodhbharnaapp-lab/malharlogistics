@@ -144,68 +144,52 @@ const TripReport = () => {
             try {
                 setLoading(true)
                 setError(null)
-
                 let allTrips = []
                 let currentPage = 1
                 let totalPages = 1
-
                 // First, get the first page to know total pages
                 const firstResponse = await fetch(`${TRIPS_API}?page=1&limit=100`)
                 if (!firstResponse.ok) {
                     throw new Error(`HTTP error! status: ${firstResponse.status}`)
                 }
-
                 const firstResult = await firstResponse.json()
-
                 if (firstResult.success && firstResult.data) {
                     // Add first page data
                     allTrips = [...firstResult.data]
-
                     // Get pagination info from response
                     totalPages = firstResult.totalPages || 1
-
                     console.log(`Total pages: ${totalPages}, Total records: ${firstResult.totalCount || allTrips.length}`)
-
                     // Fetch remaining pages if any
                     if (totalPages > 1) {
                         const pagePromises = []
-
                         for (let page = 2; page <= totalPages; page++) {
                             pagePromises.push(
                                 fetch(`${TRIPS_API}?page=${page}&limit=100`)
                                     .then(res => res.json())
                             )
                         }
-
                         const remainingResults = await Promise.all(pagePromises)
-
                         remainingResults.forEach(result => {
                             if (result.success && result.data) {
                                 allTrips = [...allTrips, ...result.data]
                             }
                         })
                     }
-
                     console.log(`Total trips fetched: ${allTrips.length}`)
-
                     // Now fetch advance data for all trips (process in batches to avoid too many requests)
                     const batchSize = 20
                     const tripsWithAdvances = []
-
                     for (let i = 0; i < allTrips.length; i += batchSize) {
                         const batch = allTrips.slice(i, i + batchSize)
-
                         const batchPromises = batch.map(async (trip, index) => {
                             try {
                                 // Fetch advance data for this trip
                                 const advanceResponse = await fetch(
                                     `${ADVANCE_API}?tripId=${trip._id}`
                                 )
-
                                 let totalPaid = 0
                                 let paidAdvancesCount = 0
                                 let unpaidAdvancesCount = 0
-
                                 if (advanceResponse.ok) {
                                     const advanceResult = await advanceResponse.json()
                                     if (advanceResult.success) {
@@ -214,9 +198,46 @@ const TripReport = () => {
                                         unpaidAdvancesCount = advanceResult.unpaidCount || 0
                                     }
                                 }
-
                                 const balance = (trip.totalAdvanceAmount || 0) - totalPaid
-
+                                // return {
+                                //     id: trip._id || (i + index),
+                                //     srNo: i + index + 1,
+                                //     tripDate: trip.tripDate ?
+                                //         new Date(trip.tripDate).toLocaleDateString('en-IN', {
+                                //             day: '2-digit',
+                                //             month: 'short',
+                                //             year: 'numeric'
+                                //         }) : 'N/A',
+                                //     originalDate: trip.tripDate ? new Date(trip.tripDate) : null,
+                                //     lhsNo: trip.lhsNo || 'N/A',
+                                //     from: trip.fromLocation || 'N/A',
+                                //     to: trip.toLocation || 'N/A',
+                                //     dieselLTR: trip.dieselLtr || 0,
+                                //     dieselRate: trip.dieselRate || 0,
+                                //     totalDiesel: trip.totalDieselAmount || 0,
+                                //     tripAdvance: trip.advanceAmount || 0,
+                                //     totalAdvance: trip.totalAdvanceAmount || 0,
+                                //     advancePaid: totalPaid,
+                                //     balance: balance,
+                                //     endDate: trip.createdAt ?
+                                //         new Date(trip.createdAt).toLocaleDateString('en-IN', {
+                                //             day: '2-digit',
+                                //             month: 'short',
+                                //             year: 'numeric'
+                                //         }) : 'N/A',
+                                //     driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
+                                //     statusRemarks: trip.statusRemarks || '',
+                                //     vehicleNo: trip.vehicleNo,
+                                //     vehicleType: trip.vehicleType,
+                                //     driverName: trip.driverName,
+                                //     driverMobile: trip.driverMobile,
+                                //     tripStatus: trip.tripStatus,
+                                //     tripType: trip.tripType,
+                                //     totalPaid: totalPaid,
+                                //     paidAdvancesCount: paidAdvancesCount,
+                                //     unpaidAdvancesCount: unpaidAdvancesCount,
+                                //     sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
+                                // }
                                 return {
                                     id: trip._id || (i + index),
                                     srNo: i + index + 1,
@@ -244,14 +265,16 @@ const TripReport = () => {
                                             year: 'numeric'
                                         }) : 'N/A',
                                     driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
-                                    statusRemarks: trip.statusRemarks || '',
                                     vehicleNo: trip.vehicleNo,
                                     vehicleType: trip.vehicleType,
                                     driverName: trip.driverName,
                                     driverMobile: trip.driverMobile,
                                     tripStatus: trip.tripStatus,
-                                    tripType: trip.tripType,
-                                    totalPaid: totalPaid,
+                                    // ⭐ ADD THESE
+                                    ifscCode: trip.ifscCode || "",
+                                    accountNo: trip.accountNo || "",
+                                    bankName: trip.bankName || "",
+                                    accountHolderName: trip.accountHolderName || "",
                                     paidAdvancesCount: paidAdvancesCount,
                                     unpaidAdvancesCount: unpaidAdvancesCount,
                                     sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
@@ -300,17 +323,13 @@ const TripReport = () => {
                                 }
                             }
                         })
-
                         const batchResults = await Promise.all(batchPromises)
                         tripsWithAdvances.push(...batchResults)
                     }
-
                     setData(tripsWithAdvances)
-
                     // Group data by vehicle
                     const grouped = groupDataByVehicle(tripsWithAdvances)
                     setGroupedData(grouped)
-
                     // Auto-expand first few vehicles
                     const vehicleKeys = Object.keys(grouped)
                     const initialExpanded = {}
@@ -318,9 +337,7 @@ const TripReport = () => {
                         initialExpanded[key] = true
                     })
                     setExpandedVehicles(initialExpanded)
-
                     console.log(`Final data loaded: ${tripsWithAdvances.length} trips, ${vehicleKeys.length} vehicles`)
-
                 } else {
                     throw new Error(firstResult.message || 'No data received')
                 }
@@ -333,7 +350,6 @@ const TripReport = () => {
                 setLoading(false)
             }
         }
-
         fetchAllTripData()
     }, [])
     /* ---------------- GROUP DATA BY VEHICLE ---------------- */
@@ -446,14 +462,11 @@ const TripReport = () => {
         const vehicleKeys = Object.keys(filteredGroupedData)
         const startIndex = (page - 1) * rowsPerPage
         const endIndex = startIndex + rowsPerPage
-
         const paginatedKeys = vehicleKeys.slice(startIndex, endIndex)
-
         const paginated = {}
         paginatedKeys.forEach(key => {
             paginated[key] = filteredGroupedData[key]
         })
-
         return {
             vehicles: paginated,
             totalPages: Math.ceil(vehicleKeys.length / rowsPerPage),
@@ -498,192 +511,85 @@ const TripReport = () => {
         })
     }
     /* ---------------- PRINT FUNCTIONALITY ---------------- */
-    // const handlePrint = useReactToPrint({
-    //     content: () => componentRef.current,
-    //     documentTitle: 'Vehicle_Wise_Trip_Report',
-    //     onBeforePrint: () => console.log('Printing...'),
-    //     onAfterPrint: () => console.log('Printed!'),
-    //     removeAfterPrint: true,
-    //     pageStyle: `
-    //         @media print {
-    //             body { -webkit-print-color-adjust: exact; }
-    //             .no-print { display: none !important; }
-    //             .vehicle-header {
-    //                 background-color: #e3f2fd !important;
-    //                 page-break-inside: avoid;
-    //             }
-    //             .vehicle-totals {
-    //                 background-color: #f3e5f5 !important;
-    //                 font-weight: bold;
-    //             }
-    //             .overall-totals {
-    //                 background-color: #e8f5e8 !important;
-    //                 font-weight: bold;
-    //             }
-    //         }
-    //     `
-    // })
     /* ---------------- EXPORT TO PDF WITH VEHICLE GROUPING ---------------- */
     const exportToPDF = () => {
-        if (filteredData.length === 0) {
-            alert('No data to export!')
+        const allowedStatus = ["closed", "completed", "cancelled"]
+        const closedTrips = filteredData.filter(trip =>
+            allowedStatus.includes((trip.tripStatus || "").toLowerCase())
+        )
+        if (closedTrips.length === 0) {
+            alert("No closed/completed/cancelled trips to export!")
             return
         }
-        const doc = new jsPDF('landscape')
-        let startY = 40
-        const vehicleKeys = Object.keys(filteredGroupedData)
-        // Header
-        doc.setFontSize(16)
-        doc.text('VEHICLE WISE TRIP REPORT', 14, 15)
-        doc.setFontSize(10)
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22)
-        // Filters applied
-        const filtersText = []
-        if (filters.fromDate) filtersText.push(`From: ${filters.fromDate}`)
-        if (filters.toDate) filtersText.push(`To: ${filters.toDate}`)
-        if (filters.vehicleNo) filtersText.push(`Vehicle: ${filters.vehicleNo}`)
-        if (filters.lhsNo) filtersText.push(`LHS: ${filters.lhsNo}`)
-        if (filtersText.length > 0) {
-            doc.text(`Filters: ${filtersText.join(', ')}`, 14, 29)
-        }
-        // Summary
-        doc.text(`Total Vehicles: ${vehicleKeys.length} | Total Trips: ${filteredData.length}`, 14, 36)
-        // Loop through each vehicle
-        vehicleKeys.forEach((vehicleKey, vehicleIndex) => {
-            const vehicleData = filteredGroupedData[vehicleKey]
-            // Add vehicle header
-            if (vehicleIndex > 0) {
-                doc.addPage('landscape')
-                startY = 20
-            }
-            // Vehicle header
-            doc.setFontSize(12)
-            doc.setTextColor(0, 102, 204)
-            doc.text(`Vehicle: ${vehicleData.vehicleNo} (${vehicleData.vehicleType || 'N/A'})`, 14, startY)
-            doc.setFontSize(10)
-            doc.setTextColor(0, 0, 0)
-            doc.text(`Driver: ${vehicleData.driverName || 'N/A'} | Trips: ${vehicleData.trips.length}`, 14, startY + 7)
-            // Vehicle totals
-            const vehicleTotals = [
-                ['', '', '', '', '', '', 'Vehicle Totals:',
-                    `${vehicleData.totals.totalDiesel.toFixed(2)}`,
-                    `${vehicleData.totals.totalTripAdvance.toFixed(2)}`,
-                    `${vehicleData.totals.totalAdvance.toFixed(2)}`,
-                    `${vehicleData.totals.totalAdvancePaid.toFixed(2)}`,
-                    '',
-                    `${vehicleData.totals.totalBalance.toFixed(2)}`,
-                    '', '']
-            ]
+        const doc = new jsPDF("landscape")
+        closedTrips.forEach((trip, index) => {
+            if (index !== 0) doc.addPage()
+            const pageWidth = doc.internal.pageSize.width
+            // Title
+            doc.setFontSize(16)
+            doc.text("Trip Details", pageWidth / 2, 15, { align: "center" })
+            doc.setFontSize(9)
+            doc.text(`Print Date : ${new Date().toLocaleString()}`, pageWidth - 70, 15)
+            // Trip info table
             autoTable(doc, {
-                startY: startY + 12,
-                head: [
-                    ['Sr No', 'Trip Date', 'LHS No.', 'From', 'To', 'Diesel LTR', 'Diesel Rate',
-                        'Total Diesel', 'Trip Advance', 'Total Advance', 'Advance Paid', 'End Date',
-                        'Balance', 'Driver Info', 'Close Remark']
+                startY: 20,
+                theme: "grid",
+                styles: { fontSize: 9 },
+                body: [
+                    ["Trip Start", String(trip.tripDate || ""), "Trip End", String(trip.endDate || "")],
+                    ["Vehicle No", String(trip.vehicleNo || ""), "Vehicle Type", String(trip.vehicleType || "")],
+                    ["From", String(trip.from || ""), "To", String(trip.to || "")],
+                    ["IFSC Code", String(trip.ifscCode || ""), "Account No", String(trip.accountNo || "")],
+                    ["Bank Name", String(trip.bankName || ""), "A/C Holder Name", String(trip.accountHolderName || "")],
+                    ["Diesel LTR", String(trip.dieselLTR || 0), "Advance", String(trip.tripAdvance || 0)],
+                    ["Diesel Rate", String(trip.dieselRate || 0), "Total Advance", String(trip.totalAdvance || 0)],
+                    ["Total Diesel", String(trip.totalDiesel || 0), "Advance Paid", String(trip.advancePaid || 0)],
+                    ["LHS No.", String(trip.lhsNo || ""), "Balance Advance", Number(trip.balance || 0).toFixed(2)],
+                    ["Driver Info", String(trip.driverInfo || ""), "", ""],
+                    ["Close Remark", String(trip.statusRemarks || ""), "", ""]
                 ],
-                body: vehicleData.trips.map(trip => [
-                    trip.srNo,
-                    trip.tripDate,
-                    trip.lhsNo,
-                    trip.from,
-                    trip.to,
-                    trip.dieselLTR,
-                    `${trip.dieselRate.toFixed(2)}`,
-                    `${trip.totalDiesel.toFixed(2)}`,
-                    `${trip.tripAdvance.toFixed(2)}`,
-                    `${trip.totalAdvance.toFixed(2)}`,
-                    `${trip.advancePaid.toFixed(2)}`,
-                    trip.endDate,
-                    `${trip.balance.toFixed(2)}`,
-                    trip.driverInfo,
-                    trip.statusRemarks || '-'
-                ]),
-                foot: vehicleTotals,
-                theme: 'grid',
-                headStyles: { fillColor: [33, 150, 243], textColor: 255 },
-                footStyles: { fillColor: [156, 39, 176], textColor: 255, fontStyle: 'bold' },
-                styles: { fontSize: 7 },
-                margin: { left: 14, right: 14 },
-                pageBreak: 'avoid'
+                columnStyles: {
+                    0: { fontStyle: "bold" },
+                    2: { fontStyle: "bold" }
+                }
             })
-            startY = doc.lastAutoTable.finalY + 10
-            // Check if we need a new page
-            if (startY > 180 && vehicleIndex < vehicleKeys.length - 1) {
-                doc.addPage('landscape')
-                startY = 20
-            }
+            const paidStartY = doc.lastAutoTable.finalY + 10
+            // Paid advance title
+            doc.setFontSize(11)
+            doc.text("Paid Advance Info.", 14, paidStartY)
+            const paidAdvances = (trip.advances || []).filter(a => a.paid)
+            autoTable(doc, {
+                startY: paidStartY + 2,
+                head: [["Date", "Type", "Amount", "Remark"]],
+                body: paidAdvances.map(a => [
+                    String(a.date || ""),
+                    String(a.type || ""),
+                    String(a.amount || 0),
+                    String(a.remark || "")
+                ]),
+                theme: "grid",
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [70, 90, 140] }
+            })
+            const unpaidAdvances = (trip.advances || []).filter(a => !a.paid)
+            // Unpaid title
+            doc.text("Unpaid Advance Info.", pageWidth / 2 + 10, paidStartY)
+            autoTable(doc, {
+                startY: paidStartY + 2,
+                margin: { left: pageWidth / 2 },
+                head: [["Date", "Type", "Amount", "Remark"]],
+                body: unpaidAdvances.map(a => [
+                    String(a.date || ""),
+                    String(a.type || ""),
+                    String(a.amount || 0),
+                    String(a.remark || "")
+                ]),
+                theme: "grid",
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [70, 90, 140] }
+            })
         })
-        // Overall summary page
-        doc.addPage('landscape')
-        doc.setFontSize(14)
-        doc.text('OVERALL SUMMARY', 14, 20)
-        doc.setFontSize(10)
-        // Overall totals table
-        autoTable(doc, {
-            startY: 30,
-            head: [['Summary', 'Value']],
-            body: [
-                ['Total Vehicles', vehicleKeys.length],
-                ['Total Trips', filteredData.length],
-                ['Total Diesel Amount', `${overallTotals.totalDiesel.toFixed(2)}`],
-                ['Total Trip Advance', `${overallTotals.totalTripAdvance.toFixed(2)}`],
-                ['Total Advance Amount', `${overallTotals.totalAdvance.toFixed(2)}`],
-                ['Total Advance Paid', `${overallTotals.totalAdvancePaid.toFixed(2)}`],
-                ['Total Outstanding Balance', `${overallTotals.totalBalance.toFixed(2)}`]
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [76, 175, 80], textColor: 255 },
-            styles: { fontSize: 10 },
-            margin: { left: 14, right: 14 }
-        })
-        // Vehicle-wise summary
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 20,
-            head: [['Vehicle No', 'Vehicle Type', 'Trips', 'Total Advance', 'Paid', 'Balance', 'Status']],
-            body: vehicleKeys.map(vehicleKey => {
-                const vehicle = filteredGroupedData[vehicleKey]
-                const balance = vehicle.totals.totalBalance
-                let status = 'Fully Paid'
-                let statusColor = [76, 175, 80] // Green
-                if (balance === vehicle.totals.totalAdvance) {
-                    status = 'Not Paid'
-                    statusColor = [244, 67, 54] // Red
-                } else if (balance > 0) {
-                    status = 'Partial'
-                    statusColor = [255, 152, 0] // Orange
-                }
-                return [
-                    vehicle.vehicleNo,
-                    vehicle.vehicleType || 'N/A',
-                    vehicle.trips.length,
-                    `${vehicle.totals.totalAdvance.toFixed(2)}`,
-                    `${vehicle.totals.totalAdvancePaid.toFixed(2)}`,
-                    `${balance.toFixed(2)}`,
-                    status
-                ]
-            }),
-            theme: 'grid',
-            headStyles: { fillColor: [33, 150, 243], textColor: 255 },
-            bodyStyles: {
-                fillColor: (row) => {
-                    const balance = filteredGroupedData[vehicleKeys[row.index]].totals.totalBalance
-                    const totalAdvance = filteredGroupedData[vehicleKeys[row.index]].totals.totalAdvance
-                    if (balance === 0) return [232, 245, 233] // Light green
-                    if (balance === totalAdvance) return [255, 235, 238] // Light red
-                    return [255, 248, 225] // Light yellow
-                }
-            },
-            styles: { fontSize: 9 },
-            margin: { left: 14, right: 14 }
-        })
-        // Footer
-        const pageCount = doc.internal.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            doc.setFontSize(8)
-            doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10)
-        }
-        doc.save(`Vehicle_Wise_Trip_Report_${new Date().toISOString().split('T')[0]}.pdf`)
+        doc.save(`ClosedTrips_${closedTrips.length}.pdf`)
     }
     /* ---------------- UI ---------------- */
     if (loading) {
@@ -787,7 +693,6 @@ const TripReport = () => {
                                 <Typography variant="body2">
                                     Showing <strong>{paginatedVehicles.startIndex}</strong> to <strong>{paginatedVehicles.endIndex}</strong> of <strong>{paginatedVehicles.totalVehicles}</strong> vehicles
                                 </Typography>
-
                                 {/* Rows per page selector */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="body2">Show:</Typography>
@@ -811,7 +716,6 @@ const TripReport = () => {
                                     </select>
                                 </Box>
                             </Box>
-
                             {/* Right side - Pagination buttons */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                 <Button
@@ -822,7 +726,6 @@ const TripReport = () => {
                                 >
                                     First
                                 </Button>
-
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -831,11 +734,9 @@ const TripReport = () => {
                                 >
                                     Previous
                                 </Button>
-
                                 <Typography variant="body2" sx={{ mx: 1 }}>
                                     Page <strong>{page}</strong> of <strong>{paginatedVehicles.totalPages}</strong>
                                 </Typography>
-
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -844,7 +745,6 @@ const TripReport = () => {
                                 >
                                     Next
                                 </Button>
-
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -855,7 +755,6 @@ const TripReport = () => {
                                 </Button>
                             </Box>
                         </Box>
-
                         {/* Quick page jump (optional) */}
                         {paginatedVehicles.totalPages > 5 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
