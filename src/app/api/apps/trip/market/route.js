@@ -1877,60 +1877,20 @@
 
 
 
-// import { NextResponse } from 'next/server'
-// import { MongoClient, ObjectId } from 'mongodb'
-// import { getServerSession } from 'next-auth'
-// import { authOptions } from '@/libs/auth'
-// import { PERMISSIONS } from '@/libs/permissions'
-// import { checkPermission, checkAnyPermission } from '@/utils/checkPermission'
-
-// const TRIPS_COLLECTION = 'markettrips'
-// const TRIP_STATUS_HISTORY_COLLECTION = 'market_trip_status_history'
-
-// const client = new MongoClient(process.env.DATABASE_URL)
-
-// async function getDB() {
-//     await client.connect()
-//     return client.db()
-// }
-
-// /* ================= STATUS CHANGE HELPER ================= */
-// async function recordStatusChange(db, tripId, oldStatus, newStatus, remarks, changedBy = 'system') {
-//     if (!remarks || !remarks.trim()) {
-//         return { success: false, error: 'Remarks are required for status change' }
-//     }
-
-//     const statusChangeRecord = {
-//         tripId: new ObjectId(tripId),
-//         oldStatus,
-//         newStatus,
-//         remarks: remarks.trim(),
-//         changedBy,
-//         changedAt: new Date(),
-//         createdAt: new Date()
-//     }
-
-//     try {
-//         await db.collection(TRIP_STATUS_HISTORY_COLLECTION).insertOne(statusChangeRecord)
-//         return { success: true, data: statusChangeRecord }
-//     } catch (error) {
-//         console.error('Error recording status change:', error)
-//         return { success: false, error: error.message }
-//     }
-// }
 import { NextResponse } from 'next/server'
-import { ObjectId } from 'mongodb'
+import { MongoClient, ObjectId } from 'mongodb'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/libs/auth'
 import { PERMISSIONS } from '@/libs/permissions'
 import { checkPermission, checkAnyPermission } from '@/utils/checkPermission'
-import clientPromise from '@/lib/mongodb' // Adjust path as needed
 
 const TRIPS_COLLECTION = 'markettrips'
 const TRIP_STATUS_HISTORY_COLLECTION = 'market_trip_status_history'
 
+const client = new MongoClient(process.env.DATABASE_URL)
+
 async function getDB() {
-    const client = await clientPromise
+    await client.connect()
     return client.db()
 }
 
@@ -1958,6 +1918,7 @@ async function recordStatusChange(db, tripId, oldStatus, newStatus, remarks, cha
         return { success: false, error: error.message }
     }
 }
+
 /* ================= GET STATUS HISTORY ================= */
 export async function GET(request) {
     try {
