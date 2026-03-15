@@ -426,7 +426,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               <MenuItem href={`/${locale}/apps/vehicles/vehicle-owners/list`}>
                 {'Vehicle Owners'}
               </MenuItem>
-              <MenuItem href={`/${locale}/apps/vehicles/market`}>{'Market Vehicles'}</MenuItem>
+              {/* <MenuItem href={`/${locale}/apps/vehicles/market`}>{'Market Vehicles'}</MenuItem> */}
             </SubMenu>
 
             {/* Trips - Full access */}
