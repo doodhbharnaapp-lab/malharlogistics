@@ -30,11 +30,9 @@
 //           <StatsCard />
 //         </Grid>
 //         <Grid item xs={12} md={6}>
-
 //           < TabBasedVehicleModels />
 //         </Grid>
 //         < MarketTabBasedVehicleModels />
-
 //         <Grid item xs={12} md={12}>
 //           <TabBasedTable />
 //         </Grid>
@@ -43,12 +41,7 @@
 //   )
 // }
 // export default LogisticsDashboard
-
-
-
-
 'use client'
-
 // MUI Imports
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
@@ -69,16 +62,13 @@ import TabBasedTable from '@/views/apps/logistics/dashboard/TabBasedTable'
 import TabBasedVehicleModels from '@/views/apps/logistics/dashboard/OwnTabBasedVehicleModels'
 import MarketTabBasedVehicleModels from '@/views/apps/logistics/dashboard/MArketTabBasedVehicleModels'
 import { useState, useEffect } from 'react'
-
 const LogisticsDashboard = () => {
   // Hooks
   const { data: session, status } = useSession()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-
   // Get user role from session
   const userRole = session?.user?.role
-
   // Fetch data based on role
   useEffect(() => {
     const fetchData = async () => {
@@ -88,12 +78,10 @@ const LogisticsDashboard = () => {
       }
       setLoading(false)
     }
-
     if (status !== 'loading') {
       fetchData()
     }
   }, [userRole, status])
-
   // Show loading state
   if (status === 'loading' || loading) {
     return (
@@ -102,7 +90,6 @@ const LogisticsDashboard = () => {
       </Box>
     )
   }
-
   // Admin View - Full dashboard
   if (userRole === 'admin') {
     return (
@@ -129,7 +116,6 @@ const LogisticsDashboard = () => {
       </Grid>
     )
   }
-
   // Account1 View
   if (userRole === 'account1') {
     return (
@@ -164,7 +150,6 @@ const LogisticsDashboard = () => {
       </Grid>
     )
   }
-
   // Other Users View
   return (
     <Box sx={{
@@ -192,5 +177,4 @@ const LogisticsDashboard = () => {
     </Box>
   )
 }
-
 export default LogisticsDashboard

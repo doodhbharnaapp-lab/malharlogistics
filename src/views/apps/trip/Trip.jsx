@@ -2254,7 +2254,7 @@ const TripInfo = () => {
             // Total Advance Amount Column
             columnHelper.accessor('totalAdvanceAmount', {
                 header: 'Total Advance',
-                cell: ({ row }) => `${row.original.totalAdvanceAmount || 0}`
+                cell: ({ row }) => `${row.original.totalAdvanceAmount?.toFixed(2) || '0.00'}`
             }),
             // Paid Amount Column
             columnHelper.display({

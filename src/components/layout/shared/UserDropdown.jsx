@@ -56,7 +56,7 @@ const UserDropdown = () => {
   const handleUserLogout = async () => {
     try {
       // Sign out from the app
-      await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL })
+      await signOut({ callbackUrl: process.env.NEXT_PUBLIC_APP_URL + '/en/login' })
     } catch (error) {
       console.error(error)
       // Show above error in a toast like following
