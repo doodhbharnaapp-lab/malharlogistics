@@ -1,29 +1,6 @@
 'use client'
 import { useState, useMemo, useRef, useEffect } from 'react'
-import {
-    Card,
-    CardContent,
-    Button,
-    Typography,
-    TextField,
-    IconButton,
-    Tooltip,
-    Paper,
-    Chip,
-    MenuItem,
-    InputAdornment,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    FormControl,
-    InputLabel,
-    Select,
-    Alert,
-    Snackbar,
-    CircularProgress,
-    Divider
-} from '@mui/material'
+import { Card, CardContent, Button, Typography, TextField, IconButton, Tooltip, Paper, Chip, MenuItem, InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select, Alert, Snackbar, CircularProgress, Divider } from '@mui/material'
 import {
     createColumnHelper,
     getCoreRowModel,
@@ -68,71 +45,97 @@ const MarketAdvanceReport = () => {
     useEffect(() => {
         fetchTripsWithAdvances()
     }, [])
+    // Poora fetchTripsWithAdvances function replace kar is se:
+
     const fetchTripsWithAdvances = async () => {
         try {
             setLoading(true)
+
+            // 1. Pehle saari trips fetch kar
             const response = await fetch(TRIPS_API)
             const result = await response.json()
-            if (result.success) {
-                // Fetch advances for each trip
-                const tripsWithAdvances = await Promise.all(
-                    (result.data || []).map(async (trip) => {
-                        try {
-                            const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
-                            const advancesResult = await advancesResponse.json()
-                            // Calculate totals and separate advances
-                            const advances = advancesResult.success ? advancesResult.data : []
-                            const paidAdvances = advances.filter(a => a.status === 'paid')
-                            const unpaidAdvances = advances.filter(a => a.status === 'unpaid')
-                            const totalAdvancePaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-                            const totalAdvanceUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
-                            // Determine status - "paid" only when ALL advances are paid
-                            let advanceStatus = 'none'
-                            if (paidAdvances.length > 0 && unpaidAdvances.length === 0) {
-                                advanceStatus = 'paid'  // All advances are paid
-                            } else if (unpaidAdvances.length > 0) {
-                                advanceStatus = 'pending'  // Has unpaid advances
-                            }
-                            return {
-                                _id: trip._id,
-                                tripDate: trip.createdAt ? new Date(trip.createdAt).toLocaleDateString() : 'N/A',
-                                tripDateObj: trip.createdAt ? new Date(trip.createdAt) : new Date(),
-                                lhsNo: trip.lhsNo || 'N/A',
-                                vehicleNo: trip.vehicleNo || '',
-                                from: trip.fromLocation || '',
-                                to: trip.toLocation || '',
-                                dieselLTR: trip.dieselLtr || 0,
-                                dieselRate: trip.dieselRate || 0,
-                                totalDiesel: (trip.dieselLtr || 0) * (trip.dieselRate || 0),
-                                totalAdvance: trip.totalAdvanceAmount || 0,
-                                advancePaid: totalAdvancePaid,
-                                advanceUnpaid: totalAdvanceUnpaid,
-                                balance: (trip.totalAdvanceAmount || 0) - totalAdvancePaid,
-                                driverName: trip.driverName || '',
-                                driverMobile: trip.driverMobile || '',
-                                bankName: trip.bankName || '',
-                                accountNo: trip.accountNo || '',
-                                ifscCode: trip.ifscCode || '',
-                                advanceStatus: advanceStatus,
-                                remark: trip.remark || '',
-                                processedBy: trip.processedBy || '',
-                                processedDate: trip.processedDate || '',
-                                // Store advances separately
-                                paidAdvances: paidAdvances,      // Only paid advances
-                                unpaidAdvances: unpaidAdvances,  // Only unpaid advances
-                                allAdvances: advances           // All advances
-                            }
-                        } catch (error) {
-                            console.error(`Error fetching advances for trip ${trip._id}:`, error)
-                            return null
-                        }
-                    })
-                )
-                // Filter out null values and set rows
-                setRows(tripsWithAdvances.filter(trip => trip !== null) || [])
-            } else {
+
+            if (!result.success) {
                 showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
+                return
             }
+
+            const allTrips = result.data || []
+
+            if (allTrips.length === 0) {
+                setRows([])
+                setLoading(false)
+                return
+            }
+
+            // 2. Saare trip IDs nikaal
+            const allTripIds = allTrips.map(trip => trip._id || trip.id).filter(Boolean)
+
+            // 3. ✅ EK HI API CALL - Saare advances ek saath fetch kar
+            const advancesResponse = await fetch(`${ADVANCES_API}?allTrips=true&tripIds=${allTripIds.join(',')}`)
+            const advancesResult = await advancesResponse.json()
+
+            // 4. Advances ko tripId se group kar
+            const advancesMap = {}
+            if (advancesResult.success) {
+                (advancesResult.data || []).forEach(advance => {
+                    const tripId = advance.tripId
+                    if (!advancesMap[tripId]) advancesMap[tripId] = []
+                    advancesMap[tripId].push(advance)
+                })
+            }
+
+            // 5. Trips ke saath merge kar
+            const tripsWithAdvances = allTrips.map((trip) => {
+                const tripId = trip._id || trip.id
+                const advances = advancesMap[tripId] || []
+
+                // Calculate totals
+                const paidAdvances = advances.filter(a => a.status === 'paid')
+                const unpaidAdvances = advances.filter(a => a.status === 'unpaid')
+                const totalAdvancePaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
+                const totalAdvanceUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                // Determine status
+                let advanceStatus = 'none'
+                if (paidAdvances.length > 0 && unpaidAdvances.length === 0) {
+                    advanceStatus = 'paid'
+                } else if (unpaidAdvances.length > 0) {
+                    advanceStatus = 'pending'
+                }
+
+                return {
+                    _id: tripId,
+                    tripDate: trip.createdAt ? new Date(trip.createdAt).toLocaleDateString() : 'N/A',
+                    tripDateObj: trip.createdAt ? new Date(trip.createdAt) : new Date(),
+                    lhsNo: trip.lhsNo || 'N/A',
+                    vehicleNo: trip.vehicleNo || '',
+                    from: trip.fromLocation || '',
+                    to: trip.toLocation || '',
+                    dieselLTR: trip.dieselLtr || 0,
+                    dieselRate: trip.dieselRate || 0,
+                    totalDiesel: (trip.dieselLtr || 0) * (trip.dieselRate || 0),
+                    totalAdvance: trip.totalAdvanceAmount || 0,
+                    advancePaid: totalAdvancePaid,
+                    advanceUnpaid: totalAdvanceUnpaid,
+                    balance: (trip.totalAdvanceAmount || 0) - totalAdvancePaid,
+                    driverName: trip.driverName || '',
+                    driverMobile: trip.driverMobile || '',
+                    bankName: trip.bankName || '',
+                    accountNo: trip.accountNo || '',
+                    ifscCode: trip.ifscCode || '',
+                    advanceStatus: advanceStatus,
+                    remark: trip.remark || '',
+                    processedBy: trip.processedBy || '',
+                    processedDate: trip.processedDate || '',
+                    paidAdvances: paidAdvances,
+                    unpaidAdvances: unpaidAdvances,
+                    allAdvances: advances
+                }
+            })
+
+            setRows(tripsWithAdvances)
+
         } catch (error) {
             console.error('Error fetching trips:', error)
             showSnackbar('Error fetching trips: ' + error.message, 'error')
@@ -140,6 +143,79 @@ const MarketAdvanceReport = () => {
             setLoading(false)
         }
     }
+    // const fetchTripsWithAdvances = async () => {
+    //     try {
+    //         setLoading(true)
+    //         const response = await fetch(TRIPS_API)
+    //         const result = await response.json()
+    //         if (result.success) {
+    //             // Fetch advances for each trip
+    //             const tripsWithAdvances = await Promise.all(
+    //                 (result.data || []).map(async (trip) => {
+    //                     try {
+    //                         const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
+    //                         const advancesResult = await advancesResponse.json()
+    //                         // Calculate totals and separate advances
+    //                         const advances = advancesResult.success ? advancesResult.data : []
+    //                         const paidAdvances = advances.filter(a => a.status === 'paid')
+    //                         const unpaidAdvances = advances.filter(a => a.status === 'unpaid')
+    //                         const totalAdvancePaid = paidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
+    //                         const totalAdvanceUnpaid = unpaidAdvances.reduce((s, a) => s + Number(a.amount || 0), 0)
+    //                         // Determine status - "paid" only when ALL advances are paid
+    //                         let advanceStatus = 'none'
+    //                         if (paidAdvances.length > 0 && unpaidAdvances.length === 0) {
+    //                             advanceStatus = 'paid'  // All advances are paid
+    //                         } else if (unpaidAdvances.length > 0) {
+    //                             advanceStatus = 'pending'  // Has unpaid advances
+    //                         }
+    //                         return {
+    //                             _id: trip._id,
+    //                             tripDate: trip.createdAt ? new Date(trip.createdAt).toLocaleDateString() : 'N/A',
+    //                             tripDateObj: trip.createdAt ? new Date(trip.createdAt) : new Date(),
+    //                             lhsNo: trip.lhsNo || 'N/A',
+    //                             vehicleNo: trip.vehicleNo || '',
+    //                             from: trip.fromLocation || '',
+    //                             to: trip.toLocation || '',
+    //                             dieselLTR: trip.dieselLtr || 0,
+    //                             dieselRate: trip.dieselRate || 0,
+    //                             totalDiesel: (trip.dieselLtr || 0) * (trip.dieselRate || 0),
+    //                             totalAdvance: trip.totalAdvanceAmount || 0,
+    //                             advancePaid: totalAdvancePaid,
+    //                             advanceUnpaid: totalAdvanceUnpaid,
+    //                             balance: (trip.totalAdvanceAmount || 0) - totalAdvancePaid,
+    //                             driverName: trip.driverName || '',
+    //                             driverMobile: trip.driverMobile || '',
+    //                             bankName: trip.bankName || '',
+    //                             accountNo: trip.accountNo || '',
+    //                             ifscCode: trip.ifscCode || '',
+    //                             advanceStatus: advanceStatus,
+    //                             remark: trip.remark || '',
+    //                             processedBy: trip.processedBy || '',
+    //                             processedDate: trip.processedDate || '',
+    //                             // Store advances separately
+    //                             paidAdvances: paidAdvances,      // Only paid advances
+    //                             unpaidAdvances: unpaidAdvances,  // Only unpaid advances
+    //                             allAdvances: advances           // All advances
+    //                         }
+    //                     } catch (error) {
+    //                         console.error(`Error fetching advances for trip ${trip._id}:`, error)
+    //                         return null
+    //                     }
+    //                 })
+    //             )
+    //             // Filter out null values and set rows
+    //             setRows(tripsWithAdvances.filter(trip => trip !== null) || [])
+    //         } else {
+    //             showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching trips:', error)
+    //         showSnackbar('Error fetching trips: ' + error.message, 'error')
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
+
     /* ================= FILTERED DATA ================= */
     const filteredData = useMemo(() => {
         return rows.filter(item => {
@@ -984,7 +1060,6 @@ const MarketAdvanceReport = () => {
                         />
                     </div>
                     <br />
-
                     <Divider />
                     <br />
                     {/* Hidden print container */}

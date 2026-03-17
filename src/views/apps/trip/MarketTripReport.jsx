@@ -1,24 +1,6 @@
 'use client'
 import { useState, useMemo, useRef, useEffect } from 'react'
-import {
-    Card,
-    CardContent,
-    Button,
-    Typography,
-    TextField,
-    IconButton,
-    Tooltip,
-    Box,
-    Grid,
-    Paper,
-    Chip,
-    CircularProgress,
-    Alert,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    Divider
-} from '@mui/material'
+import { Card, CardContent, Button, Typography, TextField, IconButton, Tooltip, Box, Grid, Paper, Chip, CircularProgress, Alert, Accordion, AccordionSummary, AccordionDetails, Divider } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import tableStyles from '@core/styles/table.module.css'
 import jsPDF from 'jspdf'
@@ -31,15 +13,7 @@ const MarketTripReport = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [expandedVehicles, setExpandedVehicles] = useState({}) // Track expanded vehicles
-    const [filters, setFilters] = useState({
-        fromDate: '',
-        toDate: '',
-        vehicleNo: '',
-        lhsNo: '',
-        fromLocation: '',
-        toLocation: '',
-        driverName: ''
-    })
+    const [filters, setFilters] = useState({ fromDate: '', toDate: '', vehicleNo: '', lhsNo: '', fromLocation: '', toLocation: '', driverName: '' })
     const componentRef = useRef()
     /* ================= API ENDPOINTS ================= */
     const API_BASE = '/api/apps'
@@ -155,20 +129,48 @@ const MarketTripReport = () => {
     ]
     /* ================= FETCH TRIPS WITH ADVANCE DATA ================= */
     // useEffect(() => {
-    //     const fetchTripData = async () => {
+    //     const fetchAllTripData = async () => {
     //         try {
     //             setLoading(true)
     //             setError(null)
-    //             // Fetch trips data
-    //             const tripResponse = await fetch(TRIPS_API)
-    //             if (!tripResponse.ok) {
-    //                 throw new Error(`HTTP error! status: ${tripResponse.status}`)
+    //             let allTrips = []
+    //             let currentPage = 1
+    //             let totalPages = 1
+    //             // First, get the first page to know total pages
+    //             const firstResponse = await fetch(`${TRIPS_API}?page=1&limit=100`)
+    //             if (!firstResponse.ok) {
+    //                 throw new Error(`HTTP error! status: ${firstResponse.status}`)
     //             }
-    //             const tripResult = await tripResponse.json()
-    //             if (tripResult.success && tripResult.data) {
-    //                 // Fetch advance data for each trip
-    //                 const tripsWithAdvances = await Promise.all(
-    //                     tripResult.data.map(async (trip, index) => {
+    //             const firstResult = await firstResponse.json()
+    //             if (firstResult.success && firstResult.data) {
+    //                 // Add first page data
+    //                 allTrips = [...firstResult.data]
+    //                 // Get pagination info from response
+    //                 totalPages = firstResult.totalPages || 1
+    //                 console.log(`Total pages: ${totalPages}, Total records: ${firstResult.totalCount || allTrips.length}`)
+    //                 // Fetch remaining pages if any
+    //                 if (totalPages > 1) {
+    //                     const pagePromises = []
+    //                     for (let page = 2; page <= totalPages; page++) {
+    //                         pagePromises.push(
+    //                             fetch(`${TRIPS_API}?page=${page}&limit=100`)
+    //                                 .then(res => res.json())
+    //                         )
+    //                     }
+    //                     const remainingResults = await Promise.all(pagePromises)
+    //                     remainingResults.forEach(result => {
+    //                         if (result.success && result.data) {
+    //                             allTrips = [...allTrips, ...result.data]
+    //                         }
+    //                     })
+    //                 }
+    //                 console.log(`Total trips fetched: ${allTrips.length}`)
+    //                 // Now fetch advance data for all trips (process in batches to avoid too many requests)
+    //                 const batchSize = 20
+    //                 const tripsWithAdvances = []
+    //                 for (let i = 0; i < allTrips.length; i += batchSize) {
+    //                     const batch = allTrips.slice(i, i + batchSize)
+    //                     const batchPromises = batch.map(async (trip, index) => {
     //                         try {
     //                             // Fetch advance data for this trip
     //                             const advanceResponse = await fetch(
@@ -187,8 +189,8 @@ const MarketTripReport = () => {
     //                             }
     //                             const balance = (trip.totalAdvanceAmount || 0) - totalPaid
     //                             return {
-    //                                 id: trip._id || index,
-    //                                 srNo: index + 1,
+    //                                 id: trip._id || (i + index),
+    //                                 srNo: i + index + 1,
     //                                 tripDate: trip.tripDate ?
     //                                     new Date(trip.tripDate).toLocaleDateString('en-IN', {
     //                                         day: '2-digit',
@@ -204,7 +206,7 @@ const MarketTripReport = () => {
     //                                 totalDiesel: trip.totalDieselAmount || 0,
     //                                 tripAdvance: trip.advanceAmount || 0,
     //                                 totalAdvance: trip.totalAdvanceAmount || 0,
-    //                                 advancePaid: totalPaid, // Actual paid amount from advance API
+    //                                 advancePaid: totalPaid,
     //                                 balance: balance,
     //                                 endDate: trip.createdAt ?
     //                                     new Date(trip.createdAt).toLocaleDateString('en-IN', {
@@ -214,27 +216,23 @@ const MarketTripReport = () => {
     //                                     }) : 'N/A',
     //                                 driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
     //                                 statusRemarks: trip.statusRemarks || '',
-    //                                 // Additional fields for grouping and filtering
     //                                 vehicleNo: trip.vehicleNo,
     //                                 vehicleType: trip.vehicleType,
     //                                 driverName: trip.driverName,
     //                                 driverMobile: trip.driverMobile,
     //                                 tripStatus: trip.tripStatus,
     //                                 tripType: trip.tripType,
-    //                                 // Advance details
     //                                 totalPaid: totalPaid,
     //                                 paidAdvancesCount: paidAdvancesCount,
     //                                 unpaidAdvancesCount: unpaidAdvancesCount,
-    //                                 // For sorting
     //                                 sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
     //                             }
     //                         } catch (advanceError) {
     //                             console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
     //                             // Return trip without advance data if error
-    //                             const balance = (trip.totalAdvanceAmount || 0)
     //                             return {
-    //                                 id: trip._id || index,
-    //                                 srNo: index + 1,
+    //                                 id: trip._id || (i + index),
+    //                                 srNo: i + index + 1,
     //                                 tripDate: trip.tripDate ?
     //                                     new Date(trip.tripDate).toLocaleDateString('en-IN', {
     //                                         day: '2-digit',
@@ -251,7 +249,7 @@ const MarketTripReport = () => {
     //                                 tripAdvance: trip.advanceAmount || 0,
     //                                 totalAdvance: trip.totalAdvanceAmount || 0,
     //                                 advancePaid: 0,
-    //                                 balance: balance,
+    //                                 balance: trip.totalAdvanceAmount || 0,
     //                                 endDate: trip.createdAt ?
     //                                     new Date(trip.createdAt).toLocaleDateString('en-IN', {
     //                                         day: '2-digit',
@@ -273,7 +271,9 @@ const MarketTripReport = () => {
     //                             }
     //                         }
     //                     })
-    //                 )
+    //                     const batchResults = await Promise.all(batchPromises)
+    //                     tripsWithAdvances.push(...batchResults)
+    //                 }
     //                 setData(tripsWithAdvances)
     //                 // Group data by vehicle
     //                 const grouped = groupDataByVehicle(tripsWithAdvances)
@@ -285,8 +285,9 @@ const MarketTripReport = () => {
     //                     initialExpanded[key] = true
     //                 })
     //                 setExpandedVehicles(initialExpanded)
+    //                 console.log(`Final data loaded: ${tripsWithAdvances.length} trips, ${vehicleKeys.length} vehicles`)
     //             } else {
-    //                 throw new Error(tripResult.message || 'No data received')
+    //                 throw new Error(firstResult.message || 'No data received')
     //             }
     //         } catch (err) {
     //             console.error('Error fetching trip data:', err)
@@ -297,48 +298,38 @@ const MarketTripReport = () => {
     //             setLoading(false)
     //         }
     //     }
-    //     fetchTripData()
+    //     fetchAllTripData()
     // }, [])
+    // Poora useEffect replace kar is se:
+
     useEffect(() => {
         const fetchAllTripData = async () => {
             try {
                 setLoading(true)
                 setError(null)
 
+                // 1. Pehle saari trips fetch kar (with pagination)
                 let allTrips = []
                 let currentPage = 1
                 let totalPages = 1
 
-                // First, get the first page to know total pages
                 const firstResponse = await fetch(`${TRIPS_API}?page=1&limit=100`)
-                if (!firstResponse.ok) {
-                    throw new Error(`HTTP error! status: ${firstResponse.status}`)
-                }
+                if (!firstResponse.ok) throw new Error(`HTTP error! status: ${firstResponse.status}`)
 
                 const firstResult = await firstResponse.json()
-
                 if (firstResult.success && firstResult.data) {
-                    // Add first page data
                     allTrips = [...firstResult.data]
-
-                    // Get pagination info from response
                     totalPages = firstResult.totalPages || 1
 
-                    console.log(`Total pages: ${totalPages}, Total records: ${firstResult.totalCount || allTrips.length}`)
-
-                    // Fetch remaining pages if any
+                    // Fetch remaining pages
                     if (totalPages > 1) {
                         const pagePromises = []
-
                         for (let page = 2; page <= totalPages; page++) {
                             pagePromises.push(
-                                fetch(`${TRIPS_API}?page=${page}&limit=100`)
-                                    .then(res => res.json())
+                                fetch(`${TRIPS_API}?page=${page}&limit=100`).then(res => res.json())
                             )
                         }
-
                         const remainingResults = await Promise.all(pagePromises)
-
                         remainingResults.forEach(result => {
                             if (result.success && result.data) {
                                 allTrips = [...allTrips, ...result.data]
@@ -348,122 +339,83 @@ const MarketTripReport = () => {
 
                     console.log(`Total trips fetched: ${allTrips.length}`)
 
-                    // Now fetch advance data for all trips (process in batches to avoid too many requests)
-                    const batchSize = 20
-                    const tripsWithAdvances = []
-
-                    for (let i = 0; i < allTrips.length; i += batchSize) {
-                        const batch = allTrips.slice(i, i + batchSize)
-
-                        const batchPromises = batch.map(async (trip, index) => {
-                            try {
-                                // Fetch advance data for this trip
-                                const advanceResponse = await fetch(
-                                    `${ADVANCE_API}?tripId=${trip._id}`
-                                )
-
-                                let totalPaid = 0
-                                let paidAdvancesCount = 0
-                                let unpaidAdvancesCount = 0
-
-                                if (advanceResponse.ok) {
-                                    const advanceResult = await advanceResponse.json()
-                                    if (advanceResult.success) {
-                                        totalPaid = advanceResult.paidAmount || 0
-                                        paidAdvancesCount = advanceResult.paidCount || 0
-                                        unpaidAdvancesCount = advanceResult.unpaidCount || 0
-                                    }
-                                }
-
-                                const balance = (trip.totalAdvanceAmount || 0) - totalPaid
-
-                                return {
-                                    id: trip._id || (i + index),
-                                    srNo: i + index + 1,
-                                    tripDate: trip.tripDate ?
-                                        new Date(trip.tripDate).toLocaleDateString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric'
-                                        }) : 'N/A',
-                                    originalDate: trip.tripDate ? new Date(trip.tripDate) : null,
-                                    lhsNo: trip.lhsNo || 'N/A',
-                                    from: trip.fromLocation || 'N/A',
-                                    to: trip.toLocation || 'N/A',
-                                    dieselLTR: trip.dieselLtr || 0,
-                                    dieselRate: trip.dieselRate || 0,
-                                    totalDiesel: trip.totalDieselAmount || 0,
-                                    tripAdvance: trip.advanceAmount || 0,
-                                    totalAdvance: trip.totalAdvanceAmount || 0,
-                                    advancePaid: totalPaid,
-                                    balance: balance,
-                                    endDate: trip.createdAt ?
-                                        new Date(trip.createdAt).toLocaleDateString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric'
-                                        }) : 'N/A',
-                                    driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
-                                    statusRemarks: trip.statusRemarks || '',
-                                    vehicleNo: trip.vehicleNo,
-                                    vehicleType: trip.vehicleType,
-                                    driverName: trip.driverName,
-                                    driverMobile: trip.driverMobile,
-                                    tripStatus: trip.tripStatus,
-                                    tripType: trip.tripType,
-                                    totalPaid: totalPaid,
-                                    paidAdvancesCount: paidAdvancesCount,
-                                    unpaidAdvancesCount: unpaidAdvancesCount,
-                                    sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
-                                }
-                            } catch (advanceError) {
-                                console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
-                                // Return trip without advance data if error
-                                return {
-                                    id: trip._id || (i + index),
-                                    srNo: i + index + 1,
-                                    tripDate: trip.tripDate ?
-                                        new Date(trip.tripDate).toLocaleDateString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric'
-                                        }) : 'N/A',
-                                    originalDate: trip.tripDate ? new Date(trip.tripDate) : null,
-                                    lhsNo: trip.lhsNo || 'N/A',
-                                    from: trip.fromLocation || 'N/A',
-                                    to: trip.toLocation || 'N/A',
-                                    dieselLTR: trip.dieselLtr || 0,
-                                    dieselRate: trip.dieselRate || 0,
-                                    totalDiesel: trip.totalDieselAmount || 0,
-                                    tripAdvance: trip.advanceAmount || 0,
-                                    totalAdvance: trip.totalAdvanceAmount || 0,
-                                    advancePaid: 0,
-                                    balance: trip.totalAdvanceAmount || 0,
-                                    endDate: trip.createdAt ?
-                                        new Date(trip.createdAt).toLocaleDateString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric'
-                                        }) : 'N/A',
-                                    driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
-                                    statusRemarks: trip.statusRemarks || '',
-                                    vehicleNo: trip.vehicleNo,
-                                    vehicleType: trip.vehicleType,
-                                    driverName: trip.driverName,
-                                    driverMobile: trip.driverMobile,
-                                    tripStatus: trip.tripStatus,
-                                    tripType: trip.tripType,
-                                    totalPaid: 0,
-                                    paidAdvancesCount: 0,
-                                    unpaidAdvancesCount: 0,
-                                    sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
-                                }
-                            }
-                        })
-
-                        const batchResults = await Promise.all(batchPromises)
-                        tripsWithAdvances.push(...batchResults)
+                    if (allTrips.length === 0) {
+                        setData([])
+                        setGroupedData({})
+                        setLoading(false)
+                        return
                     }
+
+                    // 2. Saare trip IDs nikaal
+                    const allTripIds = allTrips.map(trip => trip._id).filter(Boolean)
+
+                    // 3. ✅ EK HI API CALL - Saare advances ek saath fetch kar
+                    const advanceResponse = await fetch(`${ADVANCE_API}?allTrips=true&tripIds=${allTripIds.join(',')}`)
+                    const advanceResult = await advanceResponse.json()
+
+                    // 4. Advances ko tripId se group kar
+                    const advancesMap = {}
+                    if (advanceResult.success) {
+                        (advanceResult.data || []).forEach(advance => {
+                            const tripId = advance.tripId
+                            if (!advancesMap[tripId]) advancesMap[tripId] = []
+                            advancesMap[tripId].push(advance)
+                        })
+                    }
+
+                    // 5. Trips ke saath merge kar
+                    const tripsWithAdvances = allTrips.map((trip, index) => {
+                        const tripId = trip._id
+                        const advances = advancesMap[tripId] || []
+
+                        // Calculate totals
+                        const totalPaid = advances
+                            .filter(a => a.status === 'paid')
+                            .reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                        const paidAdvancesCount = advances.filter(a => a.status === 'paid').length
+                        const unpaidAdvancesCount = advances.filter(a => a.status === 'unpaid').length
+
+                        const balance = (trip.totalAdvanceAmount || 0) - totalPaid
+
+                        return {
+                            id: tripId,
+                            srNo: index + 1,
+                            tripDate: trip.tripDate ? new Date(trip.tripDate).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            }) : 'N/A',
+                            originalDate: trip.tripDate ? new Date(trip.tripDate) : null,
+                            lhsNo: trip.lhsNo || 'N/A',
+                            from: trip.fromLocation || 'N/A',
+                            to: trip.toLocation || 'N/A',
+                            dieselLTR: trip.dieselLtr || 0,
+                            dieselRate: trip.dieselRate || 0,
+                            totalDiesel: trip.totalDieselAmount || 0,
+                            tripAdvance: trip.advanceAmount || 0,
+                            totalAdvance: trip.totalAdvanceAmount || 0,
+                            advancePaid: totalPaid,
+                            balance: balance,
+                            endDate: trip.createdAt ? new Date(trip.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            }) : 'N/A',
+                            driverInfo: `${trip.driverName || 'N/A'} (${trip.driverMobile || 'N/A'})`,
+                            statusRemarks: trip.statusRemarks || '',
+                            vehicleNo: trip.vehicleNo,
+                            vehicleType: trip.vehicleType,
+                            driverName: trip.driverName,
+                            driverMobile: trip.driverMobile,
+                            tripStatus: trip.tripStatus,
+                            tripType: trip.tripType,
+                            totalPaid: totalPaid,
+                            paidAdvancesCount: paidAdvancesCount,
+                            unpaidAdvancesCount: unpaidAdvancesCount,
+                            sortableDate: trip.tripDate ? new Date(trip.tripDate) : new Date(0)
+                        }
+                    })
 
                     setData(tripsWithAdvances)
 
@@ -480,9 +432,6 @@ const MarketTripReport = () => {
                     setExpandedVehicles(initialExpanded)
 
                     console.log(`Final data loaded: ${tripsWithAdvances.length} trips, ${vehicleKeys.length} vehicles`)
-
-                } else {
-                    throw new Error(firstResult.message || 'No data received')
                 }
             } catch (err) {
                 console.error('Error fetching trip data:', err)
