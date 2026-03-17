@@ -2592,32 +2592,6 @@ const AdvanceRegister = () => {
             return { hasOverlapping: false, message: '', activeTrips: [] }
         }
     }
-    // const checkAdvanceExistsOnDate = (date) => {
-    //     if (!trip.advances || trip.advances.length === 0) return false
-    //     console.log('Checking if any advance exists on date:', {
-    //         searchDate: date,
-    //         existingAdvances: trip.advances.map(a => ({
-    //             date: a.date,
-    //             type: a.advanceType,
-    //             status: a.status
-    //         }))
-    //     })
-    //     // Check if ANY advance (UNPAID) exists on this date
-    //     const existingAdvance = trip.advances.find(adv => {
-    //         const advDate = adv.date || ''
-    //         const compareDate = date || ''
-    //         // Sirf date match check karo, advanceType mat check karo
-    //         const dateMatch = advDate === compareDate
-    //         // Sirf UNPAID advances check karo
-    //         const isUnpaid = adv.status === 'unpaid'
-    //         if (dateMatch && isUnpaid) {
-    //             console.log('Found existing UNPAID advance on this date:', adv)
-    //             return true
-    //         }
-    //         return false
-    //     })
-    //     return !!existingAdvance
-    // }
     const checkAdvanceExistsOnDate = (date, newAdvanceType) => {
         if (!trip.advances || trip.advances.length === 0) return false
         const advancesOnDate = trip.advances.filter(
@@ -2666,22 +2640,147 @@ const AdvanceRegister = () => {
         }
     }, [tabValue, selectedDate])
     // ==================================== FETCH TRIPS FUNCTION ==============================================
+    // const fetchTrips = async () => {
+    //     try {
+    //         setLoading(true)
+    //         const response = await fetch(TRIPS_API)
+    //         const result = await response.json()
+    //         if (result.success) {
+    //             // Get all trips data
+    //             const allTripsData = result.data || []
+    //             // IMPORTANT: Filter to ONLY show active trips
+    //             // Exclude cancelled, completed, closed, etc.
+    //             const activeTripsOnly = allTripsData.filter(trip => {
+    //                 const status = (trip.tripStatus || '').toLowerCase()
+    //                 return status === 'active' // Only show trips with status exactly 'active'
+    //             })
+    //             setAllTrips(activeTripsOnly) // Store only active trips
+    //             // Group active trips by vehicle
+    //             const tripsByVehicle = {}
+    //             activeTripsOnly.forEach(trip => {
+    //                 if (!tripsByVehicle[trip.vehicleNo]) {
+    //                     tripsByVehicle[trip.vehicleNo] = []
+    //                 }
+    //                 tripsByVehicle[trip.vehicleNo].push({
+    //                     ...trip,
+    //                     tripDate: trip.tripDate || trip.createdAt,
+    //                     statusLower: (trip.tripStatus || '').toLowerCase()
+    //                 })
+    //             })
+    //             // Process each vehicle's trips
+    //             const processedTrips = []
+    //             Object.keys(tripsByVehicle).forEach(vehicleNo => {
+    //                 const vehicleTrips = tripsByVehicle[vehicleNo]
+    //                 // Sort trips by date
+    //                 const sortedTrips = vehicleTrips.sort((a, b) => new Date(a.tripDate) - new Date(b.tripDate))
+    //                 // mark all but the earliest as "blocked"
+    //                 if (sortedTrips.length > 1) {
+    //                     // The earliest active trip is the valid one
+    //                     const earliestActive = sortedTrips[0]
+    //                     sortedTrips.forEach(trip => {
+    //                         if (trip._id === earliestActive._id || trip.id === earliestActive.id) {
+    //                             trip.canManageAdvances = true
+    //                             trip.displayStatus = 'ACTIVE (Current)'
+    //                         } else {
+    //                             trip.canManageAdvances = false
+    //                             trip.displayStatus = 'BLOCKED - Complete earlier trip first'
+    //                         }
+    //                         processedTrips.push(trip)
+    //                     })
+    //                 } else {
+    //                     // Single active trip for this vehicle
+    //                     sortedTrips.forEach(trip => {
+    //                         trip.canManageAdvances = true
+    //                         trip.displayStatus = 'ACTIVE'
+    //                         processedTrips.push(trip)
+    //                     })
+    //                 }
+    //             })
+    //             // Fetch advances for each active trip
+    //             const tripsWithAdvances = await Promise.all(
+    //                 processedTrips.map(async trip => {
+    //                     try {
+    //                         const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
+    //                         const advancesResult = await advancesResponse.json()
+    //                         // Calculate total paid and available balance
+    //                         const advances = advancesResult.success ? advancesResult.data : []
+    //                         const totalPaid = advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
+    //                         const totalProposed = advances
+    //                             .filter(a => a.status === 'unpaid')
+    //                             .reduce((s, a) => s + Number(a.amount || 0), 0)
+    //                         const balance = (trip.totalAdvanceAmount || 0) - totalPaid
+    //                         const availableBalance = balance - totalProposed
+    //                         return {
+    //                             ...trip,
+    //                             advances: advances,
+    //                             totalAdvancePaid: totalPaid,
+    //                             totalProposed: totalProposed,
+    //                             balance: balance,
+    //                             availableBalance: availableBalance,
+    //                             tripDate: trip.tripDate || trip.createdAt || '',
+    //                             canManageAdvances: trip.canManageAdvances || false,
+    //                             displayStatus: trip.displayStatus || trip.tripStatus
+    //                         }
+    //                     } catch (error) {
+    //                         console.error(`Error fetching advances for trip ${trip._id}:`, error)
+    //                         return {
+    //                             ...trip,
+    //                             advances: [],
+    //                             totalAdvancePaid: 0,
+    //                             totalProposed: 0,
+    //                             balance: trip.totalAdvanceAmount || 0,
+    //                             availableBalance: trip.totalAdvanceAmount || 0,
+    //                             tripDate: trip.tripDate || trip.createdAt || '',
+    //                             canManageAdvances: trip.canManageAdvances || false,
+    //                             displayStatus: trip.displayStatus || trip.tripStatus
+    //                         }
+    //                     }
+    //                 })
+    //             )
+    //             setRows(tripsWithAdvances || [])
+    //             // Optional: Show warning if there are vehicles with multiple active trips
+    //             const vehiclesWithMultipleTrips = Object.keys(tripsByVehicle).filter(
+    //                 vehicle => tripsByVehicle[vehicle].length > 1
+    //             )
+    //             if (vehiclesWithMultipleTrips.length > 0) {
+    //                 console.warn('Vehicles with multiple active trips:', vehiclesWithMultipleTrips)
+    //                 showSnackbar(
+    //                     `⚠️ Warning: ${vehiclesWithMultipleTrips.length} vehicle(s) have multiple active trips. Only the earliest trip for each vehicle can manage advances.`,
+    //                     'warning',
+    //                     5000
+    //                 )
+    //             }
+    //         } else {
+    //             showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching trips:', error)
+    //         showSnackbar('Error fetching trips: ' + error.message, 'error')
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
+
+
     const fetchTrips = async () => {
         try {
             setLoading(true)
             const response = await fetch(TRIPS_API)
             const result = await response.json()
+
             if (result.success) {
-                // Get all trips data
+                // Saari trips le lo
                 const allTripsData = result.data || []
-                // IMPORTANT: Filter to ONLY show active trips
-                // Exclude cancelled, completed, closed, etc.
+
+                // Sirf active trips filter karo
                 const activeTripsOnly = allTripsData.filter(trip => {
                     const status = (trip.tripStatus || '').toLowerCase()
-                    return status === 'active' // Only show trips with status exactly 'active'
+                    return status === 'active'
                 })
-                setAllTrips(activeTripsOnly) // Store only active trips
-                // Group active trips by vehicle
+
+                setAllTrips(activeTripsOnly)
+
+                // Group by vehicle
                 const tripsByVehicle = {}
                 activeTripsOnly.forEach(trip => {
                     if (!tripsByVehicle[trip.vehicleNo]) {
@@ -2690,18 +2789,18 @@ const AdvanceRegister = () => {
                     tripsByVehicle[trip.vehicleNo].push({
                         ...trip,
                         tripDate: trip.tripDate || trip.createdAt,
-                        statusLower: (trip.tripStatus || '').toLowerCase()
                     })
                 })
+
                 // Process each vehicle's trips
                 const processedTrips = []
                 Object.keys(tripsByVehicle).forEach(vehicleNo => {
                     const vehicleTrips = tripsByVehicle[vehicleNo]
-                    // Sort trips by date
-                    const sortedTrips = vehicleTrips.sort((a, b) => new Date(a.tripDate) - new Date(b.tripDate))
-                    // mark all but the earliest as "blocked"
+                    const sortedTrips = vehicleTrips.sort((a, b) =>
+                        new Date(a.tripDate) - new Date(b.tripDate)
+                    )
+
                     if (sortedTrips.length > 1) {
-                        // The earliest active trip is the valid one
                         const earliestActive = sortedTrips[0]
                         sortedTrips.forEach(trip => {
                             if (trip._id === earliestActive._id || trip.id === earliestActive.id) {
@@ -2714,7 +2813,6 @@ const AdvanceRegister = () => {
                             processedTrips.push(trip)
                         })
                     } else {
-                        // Single active trip for this vehicle
                         sortedTrips.forEach(trip => {
                             trip.canManageAdvances = true
                             trip.displayStatus = 'ACTIVE'
@@ -2722,65 +2820,69 @@ const AdvanceRegister = () => {
                         })
                     }
                 })
-                // Fetch advances for each active trip
-                const tripsWithAdvances = await Promise.all(
-                    processedTrips.map(async trip => {
-                        try {
-                            const advancesResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id || trip.id}`)
-                            const advancesResult = await advancesResponse.json()
-                            // Calculate total paid and available balance
-                            const advances = advancesResult.success ? advancesResult.data : []
-                            const totalPaid = advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
-                            const totalProposed = advances
-                                .filter(a => a.status === 'unpaid')
-                                .reduce((s, a) => s + Number(a.amount || 0), 0)
-                            const balance = (trip.totalAdvanceAmount || 0) - totalPaid
-                            const availableBalance = balance - totalProposed
-                            return {
-                                ...trip,
-                                advances: advances,
-                                totalAdvancePaid: totalPaid,
-                                totalProposed: totalProposed,
-                                balance: balance,
-                                availableBalance: availableBalance,
-                                tripDate: trip.tripDate || trip.createdAt || '',
-                                canManageAdvances: trip.canManageAdvances || false,
-                                displayStatus: trip.displayStatus || trip.tripStatus
-                            }
-                        } catch (error) {
-                            console.error(`Error fetching advances for trip ${trip._id}:`, error)
-                            return {
-                                ...trip,
-                                advances: [],
-                                totalAdvancePaid: 0,
-                                totalProposed: 0,
-                                balance: trip.totalAdvanceAmount || 0,
-                                availableBalance: trip.totalAdvanceAmount || 0,
-                                tripDate: trip.tripDate || trip.createdAt || '',
-                                canManageAdvances: trip.canManageAdvances || false,
-                                displayStatus: trip.displayStatus || trip.tripStatus
-                            }
+
+                // ⭐ IMPORTANT PART - SIRF 1 CALL MEIN SARE ADVANCES FETCH KARO
+                if (processedTrips.length > 0) {
+                    // Saare trip IDs nikaalo
+                    const allTripIds = processedTrips.map(trip => trip._id || trip.id).filter(Boolean)
+
+                    // ✅ EK HI BAAR MEIN SAB FETCH KARO
+                    // Backend mein change karna padega - multiple IDs accept karne ke liye
+                    const advancesResponse = await fetch(`${ADVANCES_API}?allTrips=true&tripIds=${allTripIds.join(',')}`)
+                    const advancesResult = await advancesResponse.json()
+
+                    // Advances ko tripId se group karo
+                    const advancesMap = {}
+                    if (advancesResult.success) {
+                        (advancesResult.data || []).forEach(advance => {
+                            const tripId = advance.tripId
+                            if (!advancesMap[tripId]) advancesMap[tripId] = []
+                            advancesMap[tripId].push(advance)
+                        })
+                    }
+
+                    // Trips ke saath merge karo
+                    const tripsWithAdvances = processedTrips.map(trip => {
+                        const tripId = trip._id || trip.id
+                        const advances = advancesMap[tripId] || []
+
+                        const totalPaid = advances.filter(a => a.status === 'paid').reduce((s, a) => s + Number(a.amount || 0), 0)
+                        const totalProposed = advances.filter(a => a.status === 'unpaid').reduce((s, a) => s + Number(a.amount || 0), 0)
+                        const balance = (trip.totalAdvanceAmount || 0) - totalPaid
+                        const availableBalance = balance - totalProposed
+
+                        return {
+                            ...trip,
+                            advances,
+                            totalAdvancePaid: totalPaid,
+                            totalProposed,
+                            balance,
+                            availableBalance,
+                            tripDate: trip.tripDate || trip.createdAt || '',
+                            canManageAdvances: trip.canManageAdvances || false,
+                            displayStatus: trip.displayStatus || trip.tripStatus
                         }
                     })
-                )
-                setRows(tripsWithAdvances || [])
-                // Optional: Show warning if there are vehicles with multiple active trips
+
+                    setRows(tripsWithAdvances)
+                } else {
+                    setRows([])
+                }
+
+                // Warning for vehicles with multiple trips
                 const vehiclesWithMultipleTrips = Object.keys(tripsByVehicle).filter(
                     vehicle => tripsByVehicle[vehicle].length > 1
                 )
                 if (vehiclesWithMultipleTrips.length > 0) {
-                    console.warn('Vehicles with multiple active trips:', vehiclesWithMultipleTrips)
                     showSnackbar(
-                        `⚠️ Warning: ${vehiclesWithMultipleTrips.length} vehicle(s) have multiple active trips. Only the earliest trip for each vehicle can manage advances.`,
+                        `⚠️ ${vehiclesWithMultipleTrips.length} vehicle(s) have multiple active trips. Only earliest trip can manage advances.`,
                         'warning',
                         5000
                     )
                 }
-            } else {
-                showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
             }
         } catch (error) {
-            console.error('Error fetching trips:', error)
+            console.error('Error:', error)
             showSnackbar('Error fetching trips: ' + error.message, 'error')
         } finally {
             setLoading(false)

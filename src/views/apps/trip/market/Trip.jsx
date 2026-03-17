@@ -3988,19 +3988,13 @@
 //     )
 // }
 // export default TripInfo
-
-
-
-
 'use client'
 import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, Button, Typography, TextField, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem, Radio, RadioGroup, FormControlLabel, CircularProgress, Alert, Snackbar, Box, Divider, ToggleButton, ToggleButtonGroup, InputAdornment, FormControl, Select } from '@mui/material'
 import { createColumnHelper, getCoreRowModel, flexRender, useReactTable } from '@tanstack/react-table'
 import tableStyles from '@core/styles/table.module.css'
-
 /* ---------------- CONSTANTS ---------------- */
 const columnHelper = createColumnHelper()
-
 const TripInfo = () => {
     /* ---------------- STATE ---------------- */
     const [allData, setAllData] = useState([]) // Store all trips
@@ -4013,15 +4007,12 @@ const TripInfo = () => {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [formLoading, setFormLoading] = useState(false)
-
     // Add new state for view mode
     const [viewMode, setViewMode] = useState('active') // 'active' or 'all'
-
     // ================= PAGINATION AND SEARCH STATE =================
     const [searchTerm, setSearchTerm] = useState('')
     const [page, setPage] = useState(0)
     const [rowsPerPage, setRowsPerPage] = useState(10)
-
     // Status change dialog state
     const [statusDialogOpen, setStatusDialogOpen] = useState(false)
     const [statusDialogData, setStatusDialogData] = useState({
@@ -4030,7 +4021,6 @@ const TripInfo = () => {
         remarks: '',
         loading: false
     })
-
     // Form state - UPDATED: Added fromLocation and toLocation, removed diesel fields
     const [form, setForm] = useState({
         vehicleNo: '',
@@ -4052,12 +4042,10 @@ const TripInfo = () => {
         initialRemarks: '',
         distanceKm: 0
     })
-
     /* ---------------- API ENDPOINTS ---------------- */
     const API_BASE = '/api/apps'
     const TRIPS_API = `${API_BASE}/trip/market`
     const ADVANCES_API = `${API_BASE}/trip/advance/market`
-
     /* ---------------- FILTERED DATA ---------------- */
     // Filter data based on view mode
     const filteredByView = useMemo(() => {
@@ -4066,11 +4054,9 @@ const TripInfo = () => {
         }
         return allData // Show all trips
     }, [allData, viewMode])
-
     // Filter data based on search term
     const filteredData = useMemo(() => {
         if (!searchTerm.trim()) return filteredByView
-
         const searchLower = searchTerm.toLowerCase().trim()
         return filteredByView.filter(row => {
             return (
@@ -4085,34 +4071,85 @@ const TripInfo = () => {
             )
         })
     }, [filteredByView, searchTerm])
-
     // Get paginated data
     const paginatedData = useMemo(() => {
         const startIndex = page * rowsPerPage
         const endIndex = startIndex + rowsPerPage
         return filteredData.slice(startIndex, endIndex)
     }, [filteredData, page, rowsPerPage])
-
     // Calculate total pages
     const totalPages = useMemo(() => {
         return Math.ceil(filteredData.length / rowsPerPage)
     }, [filteredData.length, rowsPerPage])
-
     // Reset page when search or view mode changes
     useEffect(() => {
         setPage(0)
     }, [searchTerm, viewMode])
-
     /* ---------------- HELPER: Check if trip can have status actions ---------------- */
     const canHaveStatusActions = tripStatus => {
         return tripStatus === 'active'
     }
-
     /* ---------------- FETCH INITIAL DATA ---------------- */
     useEffect(() => {
         fetchTrips()
     }, [])
-
+    // const fetchTrips = async () => {
+    //     try {
+    //         setLoading(true)
+    //         const response = await fetch(TRIPS_API)
+    //         const result = await response.json()
+    //         if (result.success) {
+    //             // For each trip, fetch its advance data
+    //             const tripsWithAdvances = await Promise.all(
+    //                 result.data.map(async trip => {
+    //                     try {
+    //                         const advanceResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id}`)
+    //                         const advanceResult = await advanceResponse.json()
+    //                         if (advanceResult.success) {
+    //                             // Calculate paid amount and balance
+    //                             const totalPaid = advanceResult.paidAmount || 0
+    //                             return {
+    //                                 ...trip,
+    //                                 totalPaid: totalPaid,
+    //                                 balance: trip.totalAdvanceAmount - totalPaid,
+    //                                 paidAdvancesCount: advanceResult.paidCount || 0,
+    //                                 unpaidAdvancesCount: advanceResult.unpaidCount || 0,
+    //                                 advanceDetails: advanceResult.data || []
+    //                             }
+    //                         } else {
+    //                             return {
+    //                                 ...trip,
+    //                                 totalPaid: 0,
+    //                                 balance: trip.totalAdvanceAmount,
+    //                                 paidAdvancesCount: 0,
+    //                                 unpaidAdvancesCount: 0,
+    //                                 advanceDetails: []
+    //                             }
+    //                         }
+    //                     } catch (advanceError) {
+    //                         console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
+    //                         return {
+    //                             ...trip,
+    //                             totalPaid: 0,
+    //                             balance: trip.totalAdvanceAmount,
+    //                             paidAdvancesCount: 0,
+    //                             unpaidAdvancesCount: 0,
+    //                             advanceDetails: []
+    //                         }
+    //                     }
+    //                 })
+    //             )
+    //             setAllData(tripsWithAdvances || [])
+    //         } else {
+    //             showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching trips:', error)
+    //         showSnackbar('Error fetching trips: ' + error.message, 'error')
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
     const fetchTrips = async () => {
         try {
             setLoading(true)
@@ -4120,48 +4157,56 @@ const TripInfo = () => {
             const result = await response.json()
 
             if (result.success) {
-                // For each trip, fetch its advance data
-                const tripsWithAdvances = await Promise.all(
-                    result.data.map(async trip => {
-                        try {
-                            const advanceResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id}`)
-                            const advanceResult = await advanceResponse.json()
+                const allTrips = result.data || []
 
-                            if (advanceResult.success) {
-                                // Calculate paid amount and balance
-                                const totalPaid = advanceResult.paidAmount || 0
-                                return {
-                                    ...trip,
-                                    totalPaid: totalPaid,
-                                    balance: trip.totalAdvanceAmount - totalPaid,
-                                    paidAdvancesCount: advanceResult.paidCount || 0,
-                                    unpaidAdvancesCount: advanceResult.unpaidCount || 0,
-                                    advanceDetails: advanceResult.data || []
-                                }
-                            } else {
-                                return {
-                                    ...trip,
-                                    totalPaid: 0,
-                                    balance: trip.totalAdvanceAmount,
-                                    paidAdvancesCount: 0,
-                                    unpaidAdvancesCount: 0,
-                                    advanceDetails: []
-                                }
-                            }
-                        } catch (advanceError) {
-                            console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
-                            return {
-                                ...trip,
-                                totalPaid: 0,
-                                balance: trip.totalAdvanceAmount,
-                                paidAdvancesCount: 0,
-                                unpaidAdvancesCount: 0,
-                                advanceDetails: []
-                            }
+                // ✅ EK HI BAAR MEIN SARE ADVANCES FETCH KARO
+                if (allTrips.length > 0) {
+                    // Saare trip IDs nikaalo
+                    const allTripIds = allTrips.map(trip => trip._id).filter(Boolean)
+
+                    // Single API call for all advances
+                    const advanceResponse = await fetch(`${ADVANCES_API}?allTrips=true&tripIds=${allTripIds.join(',')}`)
+                    const advanceResult = await advanceResponse.json()
+
+                    // Advances ko tripId se group karo
+                    const advancesMap = {}
+                    if (advanceResult.success) {
+                        (advanceResult.data || []).forEach(advance => {
+                            const tripId = advance.tripId
+                            if (!advancesMap[tripId]) advancesMap[tripId] = []
+                            advancesMap[tripId].push(advance)
+                        })
+                    }
+
+                    // Trips ke saath merge karo
+                    const tripsWithAdvances = allTrips.map(trip => {
+                        const tripId = trip._id
+                        const advances = advancesMap[tripId] || []
+
+                        // Calculate totals
+                        const totalPaid = advances
+                            .filter(a => a.status === 'paid')
+                            .reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                        const totalUnpaid = advances
+                            .filter(a => a.status === 'unpaid')
+                            .reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                        return {
+                            ...trip,
+                            advances,
+                            totalPaid,
+                            totalUnpaid,
+                            balance: (trip.totalAdvanceAmount || 0) - totalPaid,
+                            paidAdvancesCount: advances.filter(a => a.status === 'paid').length,
+                            unpaidAdvancesCount: advances.filter(a => a.status === 'unpaid').length
                         }
                     })
-                )
-                setAllData(tripsWithAdvances || [])
+
+                    setAllData(tripsWithAdvances)
+                } else {
+                    setAllData([])
+                }
             } else {
                 showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
             }
@@ -4172,28 +4217,23 @@ const TripInfo = () => {
             setLoading(false)
         }
     }
-
     /* ---------------- VIEW MODE HANDLER ---------------- */
     const handleViewModeChange = (event, newMode) => {
         if (newMode !== null) {
             setViewMode(newMode)
         }
     }
-
     /* ---------------- FORM HANDLERS ---------------- */
     // ALL FIELDS ARE MANUAL ENTRY
     const handleFormChange = (field, value) => {
         // Just update the form directly for all fields
         const updatedForm = { ...form, [field]: value }
-
         // Calculate total advance amount when advance amount changes
         if (field === 'advanceAmount') {
             updatedForm.totalAdvanceAmount = Number(value) || 0
         }
-
         setForm(updatedForm)
     }
-
     /* ---------------- DIALOG HANDLERS ---------------- */
     const openAddDialog = () => {
         setEditingItem(null)
@@ -4216,17 +4256,14 @@ const TripInfo = () => {
         })
         setDialogOpen(true)
     }
-
     const openEditDialog = async row => {
         try {
             setFormLoading(true)
             const response = await fetch(`${TRIPS_API}?id=${row._id || row.id}`)
             const result = await response.json()
-
             if (result.success && result.data) {
                 const trip = result.data
                 setEditingItem(trip)
-
                 setForm({
                     vehicleNo: trip.vehicleNo || '',
                     driverName: trip.driverName || '',
@@ -4253,7 +4290,6 @@ const TripInfo = () => {
             setFormLoading(false)
         }
     }
-
     /* ---------------- STATUS CHANGE DIALOG HANDLERS ---------------- */
     const openStatusChangeDialog = (trip, newStatus) => {
         setStatusDialogData({
@@ -4264,7 +4300,6 @@ const TripInfo = () => {
         })
         setStatusDialogOpen(true)
     }
-
     const closeStatusChangeDialog = () => {
         setStatusDialogOpen(false)
         setStatusDialogData({
@@ -4274,23 +4309,18 @@ const TripInfo = () => {
             loading: false
         })
     }
-
     const handleStatusChangeSubmit = async () => {
         const { trip, newStatus, remarks } = statusDialogData
-
         if (!remarks.trim()) {
             showSnackbar('Remarks are mandatory for status change', 'error')
             return
         }
-
         if (!trip) {
             showSnackbar('No trip selected', 'error')
             return
         }
-
         try {
             setStatusDialogData(prev => ({ ...prev, loading: true }))
-
             const response = await fetch(TRIPS_API, {
                 method: 'PUT',
                 headers: {
@@ -4303,9 +4333,7 @@ const TripInfo = () => {
                     statusChangedAt: new Date().toISOString()
                 })
             })
-
             const result = await response.json()
-
             if (result.success) {
                 const statusText = newStatus === 'completed' ? 'completed' : newStatus === 'cancelled' ? 'cancelled' : 'closed'
                 showSnackbar(`Trip marked as ${statusText}`, 'success')
@@ -4321,11 +4349,9 @@ const TripInfo = () => {
             setStatusDialogData(prev => ({ ...prev, loading: false }))
         }
     }
-
     /* ---------------- DELETE HANDLER ---------------- */
     const handleDelete = async id => {
         if (!confirm('Are you sure you want to delete this trip record?')) return
-
         try {
             const response = await fetch(TRIPS_API, {
                 method: 'DELETE',
@@ -4334,9 +4360,7 @@ const TripInfo = () => {
                 },
                 body: JSON.stringify({ id })
             })
-
             const result = await response.json()
-
             if (result.success) {
                 showSnackbar('Trip deleted successfully', 'success')
                 fetchTrips()
@@ -4348,7 +4372,6 @@ const TripInfo = () => {
             showSnackbar('Error deleting trip: ' + error.message, 'error')
         }
     }
-
     /* ---------------- API SUBMIT HANDLERS ---------------- */
     const handleSubmit = async () => {
         // Validate required fields
@@ -4356,10 +4379,8 @@ const TripInfo = () => {
             showSnackbar('Please fill in all required fields (Vehicle No, Driver Name, From Location, To Location)', 'error')
             return
         }
-
         try {
             setFormLoading(true)
-
             const submitData = {
                 vehicleNo: form.vehicleNo,
                 driverName: form.driverName,
@@ -4377,9 +4398,7 @@ const TripInfo = () => {
                 tripStatus: form.tripStatus,
                 tripDate: form.tripDate
             }
-
             let response, result
-
             if (editingItem) {
                 response = await fetch(TRIPS_API, {
                     method: 'PUT',
@@ -4392,7 +4411,6 @@ const TripInfo = () => {
                     })
                 })
                 result = await response.json()
-
                 if (result.success) {
                     showSnackbar('Trip updated successfully', 'success')
                     fetchTrips()
@@ -4409,7 +4427,6 @@ const TripInfo = () => {
                     body: JSON.stringify(submitData)
                 })
                 result = await response.json()
-
                 if (result.success) {
                     showSnackbar('Trip created successfully', 'success')
                     fetchTrips()
@@ -4425,16 +4442,13 @@ const TripInfo = () => {
             setFormLoading(false)
         }
     }
-
     /* ---------------- SNACKBAR HANDLER ---------------- */
     const showSnackbar = (message, severity = 'success') => {
         setSnackbar({ open: true, message, severity })
     }
-
     const handleCloseSnackbar = () => {
         setSnackbar(prev => ({ ...prev, open: false }))
     }
-
     /* ---------------- TABLE COLUMNS ---------------- */
     // UPDATED: Replaced routeCode with fromLocation and toLocation, removed diesel columns
     const columns = useMemo(
@@ -4445,7 +4459,6 @@ const TripInfo = () => {
                 cell: ({ row }) => {
                     const trip = row.original
                     const canChangeStatus = canHaveStatusActions(trip.tripStatus)
-
                     return (
                         <div className='flex gap-2'>
                             {canChangeStatus && (
@@ -4462,7 +4475,6 @@ const TripInfo = () => {
                                     </Tooltip>
                                 </>
                             )}
-
                             <Tooltip title={canChangeStatus ? 'Edit Trip' : 'View Trip (Read-only)'}>
                                 <span>
                                     <IconButton onClick={() => openEditDialog(trip)} disabled={!canChangeStatus}>
@@ -4470,7 +4482,6 @@ const TripInfo = () => {
                                     </IconButton>
                                 </span>
                             </Tooltip>
-
                             <Tooltip title={canChangeStatus ? 'Delete Trip' : 'Cannot delete closed/cancelled trips'}>
                                 <span>
                                     <IconButton
@@ -4481,7 +4492,6 @@ const TripInfo = () => {
                                     </IconButton>
                                 </span>
                             </Tooltip>
-
                             {!canChangeStatus && (
                                 <Tooltip title={`Trip is ${trip.tripStatus}. No further actions allowed.`}>
                                     <Chip label='Finalized' size='small' color='default' variant='outlined' />
@@ -4532,13 +4542,11 @@ const TripInfo = () => {
                     const totalAdvance = trip.totalAdvanceAmount || 0
                     const totalPaid = trip.totalPaid || 0
                     const balance = totalAdvance - totalPaid
-
                     const getBalanceStatus = () => {
                         if (balance === 0) return 'fully-paid'
                         if (balance === totalAdvance) return 'not-paid'
                         return 'partially-paid'
                     }
-
                     const status = getBalanceStatus()
                     const statusColors = {
                         'fully-paid': 'text-green-600 bg-green-50',
@@ -4550,7 +4558,6 @@ const TripInfo = () => {
                         'not-paid': 'Not Paid',
                         'partially-paid': 'Partially Paid'
                     }
-
                     return (
                         <Tooltip title={statusLabels[status]}>
                             <div className={`flex flex-col p-1 rounded ${statusColors[status]}`}>
@@ -4565,7 +4572,6 @@ const TripInfo = () => {
                 cell: ({ row }) => {
                     const trip = row.original
                     const balance = (trip.totalAdvanceAmount || 0) - (trip.totalPaid || 0)
-
                     return (
                         <div className='flex flex-col gap-1'>
                             <Chip
@@ -4609,13 +4615,11 @@ const TripInfo = () => {
         ],
         []
     )
-
     const table = useReactTable({
         data: paginatedData,
         columns,
         getCoreRowModel: getCoreRowModel()
     })
-
     /* ---------------- UI ---------------- */
     return (
         <>
@@ -4664,14 +4668,12 @@ const TripInfo = () => {
                             </Button>
                         </div>
                     </div>
-
                     {/* Search results info */}
                     {searchTerm && filteredData.length === 0 && !loading && (
                         <Alert severity="info" sx={{ mb: 2 }}>
                             No trips found matching "{searchTerm}"
                         </Alert>
                     )}
-
                     {loading ? (
                         <div className='flex justify-center p-8'>
                             <CircularProgress />
@@ -4711,7 +4713,6 @@ const TripInfo = () => {
                                     </tbody>
                                 </table>
                             </div>
-
                             {/* Pagination */}
                             <div className='flex justify-between items-center mt-4 px-2'>
                                 <div className='flex items-center gap-2'>
@@ -4795,7 +4796,6 @@ const TripInfo = () => {
                     )}
                 </CardContent>
             </Card>
-
             {/* ---------------- ADD/EDIT DIALOG ---------------- */}
             <Dialog open={dialogOpen} onClose={() => !formLoading && setDialogOpen(false)} fullWidth maxWidth='lg'>
                 <DialogTitle>
@@ -4844,9 +4844,7 @@ const TripInfo = () => {
                                 placeholder='Enter vehicle type'
                             />
                         </Box>
-
                         <Divider sx={{ my: 3 }} />
-
                         {/* Route Information - UPDATED: From and To fields */}
                         <Typography variant='h6' gutterBottom sx={{ mb: 2 }}>
                             Route Information
@@ -4888,9 +4886,7 @@ const TripInfo = () => {
                                 size='small'
                             />
                         </Box>
-
                         <Divider sx={{ my: 3 }} />
-
                         {/* Financial Information - UPDATED: Only Advance fields */}
                         <Typography variant='h6' gutterBottom sx={{ mb: 2 }}>
                             Financial Information
@@ -4918,11 +4914,8 @@ const TripInfo = () => {
                                 size="small"
                                 placeholder="Total advance amount"
                             />
-
                         </Box>
-
                         <Divider sx={{ my: 3 }} />
-
                         {/* Bank Details */}
                         <Typography variant='h6' gutterBottom sx={{ mb: 2 }}>
                             Bank Details
@@ -4961,9 +4954,7 @@ const TripInfo = () => {
                                 placeholder='Enter account holder name'
                             />
                         </Box>
-
                         <Divider sx={{ my: 3 }} />
-
                         {/* Trip Status */}
                         <Typography variant='h6' gutterBottom sx={{ mb: 2 }}>
                             Trip Status
@@ -4993,7 +4984,6 @@ const TripInfo = () => {
                                 )}
                             </RadioGroup>
                         </Box>
-
                         {/* Warning message for non-active trips in EDIT mode */}
                         {editingItem && !canHaveStatusActions(editingItem.tripStatus) && (
                             <Alert severity='warning' sx={{ mt: 2 }}>
@@ -5016,7 +5006,6 @@ const TripInfo = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
             {/* ---------------- STATUS CHANGE DIALOG ---------------- */}
             <Dialog
                 open={statusDialogOpen}
@@ -5097,7 +5086,6 @@ const TripInfo = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
             {/* ---------------- SNACKBAR ---------------- */}
             <Snackbar
                 open={snackbar.open}
@@ -5112,5 +5100,4 @@ const TripInfo = () => {
         </>
     )
 }
-
 export default TripInfo

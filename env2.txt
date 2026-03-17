@@ -1,0 +1,16 @@
+DATABASE_URL=mongodb+srv://malharsrtlogistics_db_user:d7mEQxMljKupVhVu@cluster0.ottonfn.mongodb.net/malharsrtlogistics
+NEXT_PUBLIC_APP_URL=https://malharlogistics2.vercel.app
+NEXTAUTH_URL=https://malharlogistics2.vercel.app
+NEXTAUTH_SECRET=your-malharlogistics2-secret-vercel
+API_URL=https://malharlogistics2.vercel.app/api
+NEXT_PUBLIC_API_URL=https://malharlogistics2.vercel.app/api
+NEXT_PUBLIC_REMINDER_=rem_$(openssl rand -hex 16)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=srtdocx
+CLOUDINARY_CLOUD_NAME=dh8fecoyx
+CLOUDINARY_API_KEY=546798897564577
+CLOUDINARY_API_SECRET=cBwmFtpdXgmbOuJXiNteH2cGvzM
+CRON_SECRET=cron_$(openssl rand -hex 16)
+REMINDER_API_KEY=rem_$(openssl rand -hex 16)
+ADMIN_NUMBERS=919284834754,917773937764,919823251105
+SMS_API_KEY=dCe2ItQ23Vn4RTOv
+SMS_SENDER_ID=MILKCL

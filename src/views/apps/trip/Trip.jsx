@@ -1571,55 +1571,122 @@ const TripInfo = () => {
         fetchTrips()
         fetchLookupData()
     }, [])
+    // const fetchTrips = async () => {
+    //     try {
+    //         setLoading(true)
+    //         const response = await fetch(TRIPS_API)
+    //         const result = await response.json()
+    //         if (result.success) {
+    //             // For each trip, fetch its advance data
+    //             const tripsWithAdvances = await Promise.all(
+    //                 result.data.map(async trip => {
+    //                     try {
+    //                         const advanceResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id}`)
+    //                         const advanceResult = await advanceResponse.json()
+    //                         if (advanceResult.success) {
+    //                             // Calculate paid amount and balance
+    //                             const totalPaid = advanceResult.paidAmount || 0
+    //                             return {
+    //                                 ...trip,
+    //                                 totalPaid: totalPaid,
+    //                                 balance: trip.totalAdvanceAmount - totalPaid,
+    //                                 paidAdvancesCount: advanceResult.paidCount || 0,
+    //                                 unpaidAdvancesCount: advanceResult.unpaidCount || 0,
+    //                                 // Optionally include advance details if needed
+    //                                 advanceDetails: advanceResult.data || []
+    //                             }
+    //                         } else {
+    //                             // If advance API fails, return trip without advance data
+    //                             return {
+    //                                 ...trip,
+    //                                 totalPaid: 0,
+    //                                 balance: trip.totalAdvanceAmount,
+    //                                 paidAdvancesCount: 0,
+    //                                 unpaidAdvancesCount: 0,
+    //                                 advanceDetails: []
+    //                             }
+    //                         }
+    //                     } catch (advanceError) {
+    //                         console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
+    //                         return {
+    //                             ...trip,
+    //                             totalPaid: 0,
+    //                             balance: trip.totalAdvanceAmount,
+    //                             paidAdvancesCount: 0,
+    //                             unpaidAdvancesCount: 0,
+    //                             advanceDetails: []
+    //                         }
+    //                     }
+    //                 })
+    //             )
+    //             setAllData(tripsWithAdvances || [])
+    //         } else {
+    //             showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching trips:', error)
+    //         showSnackbar('Error fetching trips: ' + error.message, 'error')
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
     const fetchTrips = async () => {
         try {
             setLoading(true)
             const response = await fetch(TRIPS_API)
             const result = await response.json()
+
             if (result.success) {
-                // For each trip, fetch its advance data
-                const tripsWithAdvances = await Promise.all(
-                    result.data.map(async trip => {
-                        try {
-                            const advanceResponse = await fetch(`${ADVANCES_API}?tripId=${trip._id}`)
-                            const advanceResult = await advanceResponse.json()
-                            if (advanceResult.success) {
-                                // Calculate paid amount and balance
-                                const totalPaid = advanceResult.paidAmount || 0
-                                return {
-                                    ...trip,
-                                    totalPaid: totalPaid,
-                                    balance: trip.totalAdvanceAmount - totalPaid,
-                                    paidAdvancesCount: advanceResult.paidCount || 0,
-                                    unpaidAdvancesCount: advanceResult.unpaidCount || 0,
-                                    // Optionally include advance details if needed
-                                    advanceDetails: advanceResult.data || []
-                                }
-                            } else {
-                                // If advance API fails, return trip without advance data
-                                return {
-                                    ...trip,
-                                    totalPaid: 0,
-                                    balance: trip.totalAdvanceAmount,
-                                    paidAdvancesCount: 0,
-                                    unpaidAdvancesCount: 0,
-                                    advanceDetails: []
-                                }
-                            }
-                        } catch (advanceError) {
-                            console.error(`Error fetching advance for trip ${trip._id}:`, advanceError)
-                            return {
-                                ...trip,
-                                totalPaid: 0,
-                                balance: trip.totalAdvanceAmount,
-                                paidAdvancesCount: 0,
-                                unpaidAdvancesCount: 0,
-                                advanceDetails: []
-                            }
+                const allTrips = result.data || []
+
+                // ✅ EK HI BAAR MEIN SARE ADVANCES FETCH KARO
+                if (allTrips.length > 0) {
+                    // Saare trip IDs nikaalo
+                    const allTripIds = allTrips.map(trip => trip._id).filter(Boolean)
+
+                    // Single API call for all advances
+                    const advanceResponse = await fetch(`${ADVANCES_API}?allTrips=true&tripIds=${allTripIds.join(',')}`)
+                    const advanceResult = await advanceResponse.json()
+
+                    // Advances ko tripId se group karo
+                    const advancesMap = {}
+                    if (advanceResult.success) {
+                        (advanceResult.data || []).forEach(advance => {
+                            const tripId = advance.tripId
+                            if (!advancesMap[tripId]) advancesMap[tripId] = []
+                            advancesMap[tripId].push(advance)
+                        })
+                    }
+
+                    // Trips ke saath merge karo
+                    const tripsWithAdvances = allTrips.map(trip => {
+                        const tripId = trip._id
+                        const advances = advancesMap[tripId] || []
+
+                        // Calculate totals
+                        const totalPaid = advances
+                            .filter(a => a.status === 'paid')
+                            .reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                        const totalUnpaid = advances
+                            .filter(a => a.status === 'unpaid')
+                            .reduce((s, a) => s + Number(a.amount || 0), 0)
+
+                        return {
+                            ...trip,
+                            advances,
+                            totalPaid,
+                            totalUnpaid,
+                            balance: (trip.totalAdvanceAmount || 0) - totalPaid,
+                            paidAdvancesCount: advances.filter(a => a.status === 'paid').length,
+                            unpaidAdvancesCount: advances.filter(a => a.status === 'unpaid').length
                         }
                     })
-                )
-                setAllData(tripsWithAdvances || [])
+
+                    setAllData(tripsWithAdvances)
+                } else {
+                    setAllData([])
+                }
             } else {
                 showSnackbar('Failed to fetch trips: ' + (result.error || result.message), 'error')
             }
